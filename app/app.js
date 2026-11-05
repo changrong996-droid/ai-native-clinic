@@ -431,6 +431,7 @@ async function ai() {
   </div>
 
   <h2 style="margin-top:26px">③ 给医生写简报 <span class="tag amber">外部大模型 · 只作参考</span></h2>
+  <p class="small muted">外部大模型默认关闭、可选；开启前须医院同意，发送内容先去除姓名等身份信息（演示阶段仅用虚构数据）。本地 AI 同样可选，需配置较好的电脑，基础算分不需要。</p>
   <div class="grid vs2">
     <div class="card old"><h3>传统软件 / 固定模板</h3><p>${esc([].concat(templateBrief("p1")).join(" "))}</p><p class="small muted">每句话都可靠，但措辞固定，也不会把几项变化联系起来看。</p></div>
     <div class="card"><p class="small muted">同一份事实生成两次。<span class="ok">绿色</span>数字在系统算出的分数里找得到，<span class="bad">红色</span>找不到，需要医生核对。</p>
@@ -460,7 +461,7 @@ function renderAsk() {
     if (LV[f.level] && !doms.some((j) => x.r0.domains[j].band && (f.level === "severe" ? x.r0.domains[j].band.level >= 3 : x.r0.domains[j].band.level >= LV[f.level]))) return false;
     if (f.change !== "any") { if (!x.retest) return false; const ok = doms.some((j) => { const d = x.retest.domains[j].score - x.r0.domains[j].score; return f.change === "improved" ? d <= -0.5 : d >= 0.5; }); if (!ok) return false; }
     return true; });
-  $("#askout").innerHTML = `<p class="small muted">AI 听懂的查询条件（${(a.ms / 1000).toFixed(1)} 秒）：</p>
+  $("#askout").innerHTML = `<p class="small muted">AI 听懂的查询条件（AI 识别耗时 ${(a.ms / 1000).toFixed(1)} 秒，不含医生核对）：</p>
     <div>${Object.entries(a.filter).map(([k, v]) => `<span class="chip ${v.confidence < 0.9 ? "low" : "hi"}">${LBL[k][v.choice] || v.choice}</span>`).join("")}</div>
     <p style="margin-top:10px">从模拟档案中查出 <b>${rows.length}</b> 人${rows.length ? "：" : "。"}${rows.slice(0, 8).map((x) => `<span class="chip">${x.no} 号</span>`).join("")}${rows.length > 8 ? " …" : ""}</p>
     <p class="small muted">条件显示在名单上方，主任一眼就能看出 AI 有没有听懂；听错了，点一下就能改。名单本身是从档案里查出来的，不会被 AI 改动。</p>`;
