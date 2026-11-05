@@ -111,7 +111,7 @@ async function modelBrief(pid) {
 /* ---------- 视图 ---------- */
 function render() {
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
-  ({ value, ai, board, concept, patient, doctor, skills, confirm })[view]();
+  ({ value, ai, board, concept, arch, patient, doctor, skills, confirm })[view]();
 }
 
 /* ---------- 说明层：写给医生、科主任、信息科看 ---------- */
@@ -132,8 +132,8 @@ const EXPLAIN = {
     check: [
       "不用点进一个个报告：今天谁最要紧，系统已经排好序，危机排第一。",
       "每个病人有一段诊前简报，写清楚这次和上次比哪里变了、还有什么没做。",
-      "简报里的每个数字都来自固定计算，不是 AI 编的；接入 AI 后它只负责把话说顺。",
-      "结果要医生点“审阅并签字”才算数；随访任务由规则自动生成，做完勾掉。",
+      "简报里的每个数字都由电脑按量表标准算出，不是 AI 编的。",
+      "结果要医生点“审阅并签字”才算数；该复测、该加做的，系统自动列进待办，做完勾掉。",
       "上方可切换科室：更年期门诊和产科共用同一套底座。",
     ],
     confirm: ["签字的含义：审阅即可，还是需要电子签名", "危机提醒发给谁、多长时间内要处理", "随访由谁执行：系统提醒患者，还是护士打电话"],
@@ -203,14 +203,14 @@ function concept() {
 
 /* 待确认清单 */
 const CONFIRM = [
-  ["量表与规则", "PHQ-9 第 9 题、EPDS 第 10 题只要不是 0 分，就转入危机流程", "自伤念头不能等报告；原文档没有这条规则", "心理科 / 医务科"],
-  ["量表与规则", "医院是否有危机干预预案？由谁接手，多长时间内处理？", "系统只负责提醒，后续必须有人处理", "医务科"],
-  ["量表与规则", "危机时给患者看的热线：12356，还是本院电话？", "目前暂用全国统一心理援助热线 12356", "心理科"],
-  ["量表与规则", "MENQOL 分级改为连续区间：1 / 1–4 / 4–6 / 6–8", "原文档按整数分档，1.33 这类得分落不进任何一档", "更年期门诊"],
-  ["量表与规则", "MENQOL 性生活维度增加“不适用”，总分按其余三个维度计算", "没有性生活的患者，否则总分会被拉低", "更年期门诊"],
-  ["量表与规则", "激素治疗、雌激素等用药建议只给医生看", "患者端只显示生活方式建议", "更年期门诊"],
-  ["量表与规则", "PHQ-9 结果措辞用“抑郁症状”，而不是“抑郁症”", "自评量表不能作为诊断", "心理科"],
-  ["量表与规则", "EPDS 采用哪个中文版本？阈值用 10 分、13 分，还是本院标准？", "医院资料中没有这份量表，由原型补充", "产科 / 心理科"],
+  ["量表与评分标准", "PHQ-9 第 9 题、EPDS 第 10 题只要不是 0 分，就转入危机流程", "自伤念头不能等报告；原文档没有这条规则", "心理科 / 医务科"],
+  ["量表与评分标准", "医院是否有危机干预预案？由谁接手，多长时间内处理？", "系统只负责提醒，后续必须有人处理", "医务科"],
+  ["量表与评分标准", "危机时给患者看的热线：12356，还是本院电话？", "目前暂用全国统一心理援助热线 12356", "心理科"],
+  ["量表与评分标准", "MENQOL 分级改为连续区间：1 / 1–4 / 4–6 / 6–8", "原文档按整数分档，1.33 这类得分落不进任何一档", "更年期门诊"],
+  ["量表与评分标准", "MENQOL 性生活维度增加“不适用”，总分按其余三个维度计算", "没有性生活的患者，否则总分会被拉低", "更年期门诊"],
+  ["量表与评分标准", "激素治疗、雌激素等用药建议只给医生看", "患者端只显示生活方式建议", "更年期门诊"],
+  ["量表与评分标准", "PHQ-9 结果措辞用“抑郁症状”，而不是“抑郁症”", "自评量表不能作为诊断", "心理科"],
+  ["量表与评分标准", "EPDS 采用哪个中文版本？阈值用 10 分、13 分，还是本院标准？", "医院资料中没有这份量表，由原型补充", "产科 / 心理科"],
   ["流程", "产科筛查时间点：孕晚期一次、产后 42 天一次，是否合适？", "原型的假设", "产科"],
   ["流程", "随访由谁执行：系统提醒患者自己复测，还是护士打电话？", "影响是否需要护士工作台", "各科室"],
   ["流程", "医生“签字”是审阅确认，还是需要正式电子签名？", "电子签名涉及 CA 和合规", "医务科 / 信息科"],
@@ -269,7 +269,7 @@ function value() {
   <div class="card"><table class="cmp">
     <tr><th></th><th>现在的常见做法 <span class="small muted">（以贵院实际为准）</span></th><th>用了之后</th></tr>
     ${[["填表", "纸质表，在诊室或候诊区填写", "候诊时用手机扫码填写，一题一屏"],
-       ["算分", "护士或医生手算，查对照表", "提交即出分，规则固定，可以核对"],
+       ["算分", "护士或医生手算，查对照表", "提交即出分，标准统一，随时可查"],
        ["存档", "纸张归档，或手工抄进电脑", "自动进入个人档案，按时间排好"],
        ["医生看结果", "翻纸，和上次比较全靠记忆", "打开就是简报：这次和上次比，哪里变了"],
        ["高风险", "看总分；自伤题可能被淹没在总分里", "单题即可触发，立刻置顶提醒"],
@@ -279,7 +279,7 @@ function value() {
   </table></div>
 
   <h2 id="check" style="margin-top:30px">用贵院自己的量表文档，当场核对</h2>
-  <p class="muted">左边按贵院提供的 PHQ-9、MENQOL 文档中的规则原样计算，右边是本系统的结果。点“运行”即可看到。</p>
+  <p class="muted">左边完全按贵院提供的 PHQ-9、MENQOL 文档中的标准来判断，右边是本系统的结果。点“运行”即可看到。</p>
   <div class="card"><table>
     <tr><th>情形</th><th>按原文档</th><th>本系统</th><th></th></tr>
     ${CASES.map((c, i) => `<tr><td>${c.title}</td><td id="old${i}" class="muted">—</td><td id="neu${i}" class="muted">—</td><td><button class="btn ghost" data-run="${i}">运行</button></td></tr>`).join("")}
@@ -305,7 +305,7 @@ function value() {
   </div>
 
   <div class="card" style="margin-top:24px;background:var(--teal2);border-color:#cfe7e4">
-    <b>建议这样看：</b>先点上面的“运行”，再看<a class="link" data-go="ai">AI 能多做什么</a>，然后打开<a class="link" data-go="doctor">医生端</a>看看简报，最后打开<a class="link" data-go="board">科室看板</a>。如果想自己做一遍，可以进<a class="link" data-go="patient">患者端</a>。原理与规则见“原理”页，上线前需要确认的事项见“上线前确认”页。
+    <b>建议这样看：</b>先点上面的“运行”，再看<a class="link" data-go="ai">AI 能多做什么</a>，然后打开<a class="link" data-go="doctor">医生端</a>看看简报，最后打开<a class="link" data-go="board">科室看板</a>。如果想自己做一遍，可以进<a class="link" data-go="patient">患者端</a>。上线前需要医院定下来的事项，见“上线前确认”。
   </div>`;
   document.querySelectorAll("[data-run]").forEach((b) => (b.onclick = () => {
     const i = b.dataset.run, r = CASES[i].run();
@@ -380,7 +380,7 @@ function board() {
       <p class="small muted">这类前后对比数据，可以直接用于科室质控、年度总结和临床研究。</p></div>
     <div class="card"><h2>每月测评量</h2><div class="months">${Object.entries(months).sort((a, b) => parseInt(a[0]) - parseInt(b[0])).map(([m, v]) => `<div><i style="height:${(v / mx) * 140}px"></i><span>${m}</span><b>${v}</b></div>`).join("")}</div>
       <p class="small muted">包括首次测评、复测和加做的 PHQ-9。</p>
-      <button class="btn ghost" id="csv">导出 Excel（CSV）</button></div>
+      <button class="btn ghost" id="csv">导出 Excel</button></div>
   </div>`;
   $("#csv").onclick = () => {
     const rows = [["编号", "首诊日期", "首诊总分", ...SKILLS.menqol.scoring.domains.map((d) => d.name), "复测总分", "PHQ-9"]];
@@ -405,39 +405,39 @@ async function ai() {
   $("#main").innerHTML = `
   <p class="tag">AI 能多做什么</p>
   <h1>同一件事，两种做法</h1>
-  <p class="lead">下面三个例子都是真实模型的输出（${esc(R.recorded_at)} 在本机录制），网页本身不连模型。分工很简单：<b>算分、分级和危机判断只由规则完成，AI 不碰</b>；AI 负责听懂和起草，它给出的内容都要经过规则或医生确认。</p>
+  <p class="lead">下面三个例子都是真实 AI 跑出来的结果（${esc(R.recorded_at)} 事先跑好，网页本身不联网调用 AI）。分工很简单：<b>算分、分级、危险提醒，一律由电脑按量表标准算，AI 不参与</b>；AI 只负责听懂和起草，它给的东西都要经过患者或医生确认。</p>
 
-  <h2 style="margin-top:26px">① 听懂患者的原话 <span class="tag gray">本地模型 h2o · 数据不出本机</span></h2>
+  <h2 style="margin-top:26px">① 听懂患者的原话 <span class="tag gray">AI 装在医院自己的电脑上 · 病人信息不出医院</span></h2>
   <div class="grid vs2">
     <div class="card old"><h3>传统软件</h3><p>29 道题逐题点“有 / 没有”，再逐题选困扰程度。年纪大或者不识字的患者常常要护士陪着填。</p></div>
     <div class="card"><div class="seg">${R.intake.map((x, i) => `<button class="${i === aiState.u ? "on" : ""}" data-u="${i}">原话 ${i + 1}</button>`).join("")}</div>
       <blockquote>“${esc(R.intake[aiState.u].text)}”</blockquote>
       <div id="chips"></div>
-      <p class="small muted">绿色为模型预填，黄色是模型把握不足的项，系统会追问。患者在确认页逐项核对，可以划掉误判，之后再选困扰程度，交给规则算分。用时 ${(R.intake[aiState.u].ms / 1000).toFixed(1)} 秒。
+      <p class="small muted">绿色是 AI 帮患者勾好的，黄色是 AI 不太确定、会再问一句的。患者最后逐项核对，勾错的划掉，再选困扰程度，分数由电脑按量表标准算。用时 ${(R.intake[aiState.u].ms / 1000).toFixed(1)} 秒。
       <label style="margin-left:8px"><input type="checkbox" id="gold" ${aiState.gold ? "checked" : ""}> 和人工标注对照</label></p></div>
   </div>
 
-  <h2 style="margin-top:26px">② 主任用一句话提问 <span class="tag gray">本地模型只负责理解问题 · 名单由规则从数据里筛</span></h2>
+  <h2 style="margin-top:26px">② 主任用一句话提问 <span class="tag gray">AI 只负责听懂问题 · 名单直接从档案里查，不靠 AI 编</span></h2>
   <div class="grid vs2">
     <div class="card old"><h3>传统软件</h3><p>只能看已经开发好的报表。想换一种问法，就得提需求、等厂商改报表。</p></div>
     <div class="card"><div class="seg">${R.ask.map((x, i) => `<button class="${i === aiState.q ? "on" : ""}" data-q="${i}">提问 ${i + 1}</button>`).join("")}</div>
       <blockquote>“${esc(R.ask[aiState.q].q)}”</blockquote><div id="askout"></div></div>
   </div>
 
-  <h2 style="margin-top:26px">③ 给医生写简报 <span class="tag amber">Gemini · 仅供参考</span></h2>
+  <h2 style="margin-top:26px">③ 给医生写简报 <span class="tag amber">外部大模型 · 只作参考</span></h2>
   <div class="grid vs2">
-    <div class="card old"><h3>传统软件 / 规则模板</h3><p>${esc([].concat(templateBrief("p1")).join(" "))}</p><p class="small muted">每句话都可靠，但措辞固定，也不会把几项变化联系起来看。</p></div>
-    <div class="card"><p class="small muted">同一份事实生成两次。<span class="ok">绿色</span>数字在规则算出的结果里找得到，<span class="bad">红色</span>找不到，需医生核对。</p>
+    <div class="card old"><h3>传统软件 / 固定模板</h3><p>${esc([].concat(templateBrief("p1")).join(" "))}</p><p class="small muted">每句话都可靠，但措辞固定，也不会把几项变化联系起来看。</p></div>
+    <div class="card"><p class="small muted">同一份事实生成两次。<span class="ok">绿色</span>数字在系统算出的分数里找得到，<span class="bad">红色</span>找不到，需要医生核对。</p>
       ${R.brief.map((b, i) => `<div class="brief"><b>第 ${i + 1} 次</b> ${checkNums(b.text, R.brief_facts)}</div>`).join("")}
-      <p class="small muted">大模型会编造内容，所以简报只能当参考：每个数字都要自动比对，正式结论以规则结果和医生判断为准。</p></div>
+      <p class="small muted">大模型有时会编内容，所以简报只能作参考：每个数字都自动比对，最终以系统算出的分数和医生判断为准。</p></div>
   </div>
 
-  <div class="card" style="margin-top:24px;background:var(--teal2);border-color:#cfe7e4"><b>一句话：</b>需要精确的部分继续由规则来做，繁琐的部分交给 AI。新增一个量表或科室，主要是给规则补一份配置，不需要重新开发一套软件。</div>`;
+  <div class="card" style="margin-top:24px;background:var(--teal2);border-color:#cfe7e4"><b>一句话：</b>要求精确的（算分、分级、危险提醒）仍由电脑按量表标准算，AI 只负责听、写、问。以后加一个科室，只要把这个科室的量表标准整理进去，不用重新开发一套软件。</div>`;
   const it = R.intake[aiState.u].answers, g = new Set(GOLD[aiState.u]), ok = new Set(OKX[aiState.u]);
   $("#chips").innerHTML = Object.entries(it).filter(([, v]) => v.choice === "present").map(([k, v]) => {
     const low = v.confidence < 0.9, mark = aiState.gold ? (g.has(k) ? " ✓" : ok.has(k) ? " ≈" : " ✗") : "";
-    return `<span class="chip ${low ? "low" : "hi"}${aiState.gold && !g.has(k) && !ok.has(k) ? " fp" : ""}">${esc(SKILLS.menqol.items.find((q) => q.id === k).text)} <small>${Math.round(v.confidence * 100)}%</small>${mark}</span>`; }).join("") +
-    (aiState.gold ? `<p class="small">人工标注 ${g.size} 项，模型漏掉 ${[...g].filter((k) => it[k].choice !== "present").length} 项；✗ 为误判，留给患者划掉；≈ 为可算可不算。</p>` : "");
+    return `<span class="chip ${low ? "low" : "hi"}${aiState.gold && !g.has(k) && !ok.has(k) ? " fp" : ""}">${esc(SKILLS.menqol.items.find((q) => q.id === k).text)}${mark}</span>`; }).join("") +
+    (aiState.gold ? `<p class="small">人工标注 ${g.size} 项，AI 漏掉 ${[...g].filter((k) => it[k].choice !== "present").length} 项；✗ 为误判，留给患者划掉；≈ 为可算可不算。</p>` : "");
   renderAsk();
   document.querySelectorAll("[data-u]").forEach((b) => (b.onclick = () => { aiState.u = +b.dataset.u; ai(); }));
   document.querySelectorAll("[data-q]").forEach((b) => (b.onclick = () => { aiState.q = +b.dataset.q; ai(); }));
@@ -454,14 +454,128 @@ function renderAsk() {
     if (LV[f.level] && !doms.some((j) => x.r0.domains[j].band && (f.level === "severe" ? x.r0.domains[j].band.level >= 3 : x.r0.domains[j].band.level >= LV[f.level]))) return false;
     if (f.change !== "any") { if (!x.retest) return false; const ok = doms.some((j) => { const d = x.retest.domains[j].score - x.r0.domains[j].score; return f.change === "improved" ? d <= -0.5 : d >= 0.5; }); if (!ok) return false; }
     return true; });
-  $("#askout").innerHTML = `<p class="small muted">模型理解成的筛选条件（${(a.ms / 1000).toFixed(1)} 秒）：</p>
-    <div>${Object.entries(a.filter).map(([k, v]) => `<span class="chip ${v.confidence < 0.9 ? "low" : "hi"}">${LBL[k][v.choice] || v.choice} <small>${Math.round(v.confidence * 100)}%</small></span>`).join("")}</div>
-    <p style="margin-top:10px">规则从模拟数据中筛出 <b>${rows.length}</b> 人${rows.length ? "：" : "。"}${rows.slice(0, 8).map((x) => `<span class="chip">${x.no} 号</span>`).join("")}${rows.length > 8 ? " …" : ""}</p>
-    <p class="small muted">条件显示在名单上方，主任一眼就能看出模型有没有理解对；理解错了，点一下就能改。名单本身不会因为模型而出错。</p>`;
+  $("#askout").innerHTML = `<p class="small muted">AI 听懂的查询条件（${(a.ms / 1000).toFixed(1)} 秒）：</p>
+    <div>${Object.entries(a.filter).map(([k, v]) => `<span class="chip ${v.confidence < 0.9 ? "low" : "hi"}">${LBL[k][v.choice] || v.choice}</span>`).join("")}</div>
+    <p style="margin-top:10px">从模拟档案中查出 <b>${rows.length}</b> 人${rows.length ? "：" : "。"}${rows.slice(0, 8).map((x) => `<span class="chip">${x.no} 号</span>`).join("")}${rows.length > 8 ? " …" : ""}</p>
+    <p class="small muted">条件显示在名单上方，主任一眼就能看出 AI 有没有听懂；听错了，点一下就能改。名单本身是从档案里查出来的，不会被 AI 改动。</p>`;
 }
 function checkNums(text, facts) {
   const pool = new Set((JSON.stringify(facts).match(/\d+(\.\d+)?/g) || []).map(Number));
   return esc(text).replace(/\d+(\.\d+)?/g, (n) => `<span class="${pool.has(Number(n)) ? "ok" : "bad"} num">${n}</span>`);
+}
+
+/* ---------- 技术页：架构全图 ---------- */
+function svgBox(x, y, w, h, cls, lines, sub) {
+  const t = lines.map((l, i) => `<text x="${x + w / 2}" y="${y + 20 + i * 16}" class="${i ? "s" : "t"}">${esc(l)}</text>`).join("");
+  return `<g class="bx ${cls}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="8"/>${t}${sub ? `<text x="${x + w - 6}" y="${y + h - 6}" class="f">${esc(sub)}</text>` : ""}</g>`;
+}
+function svgArr(pts, dashed, label, lx, ly) {
+  const d = "M" + pts.map((p) => p.join(",")).join(" L");
+  return `<path d="${d}" class="ar${dashed ? " da" : ""}" marker-end="url(#ah)"/>${label ? `<text x="${lx}" y="${ly}" class="lb">${esc(label)}</text>` : ""}`;
+}
+function archSVG() {
+  const B = svgBox, A = svgArr;
+  return `<svg viewBox="0 0 1200 560" class="arch" xmlns="http://www.w3.org/2000/svg">
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5b6770"/></marker></defs>
+  <text x="20" y="22" class="sec">采集</text><text x="690" y="22" class="sec"> </text>
+  ${B(20, 70, 170, 50, "io", ["患者端 · 量表表单", "一题一屏，扫码进入"])}
+  ${B(20, 165, 170, 50, "io", ["患者原话", "文字（语音待接）"])}
+  ${B(240, 160, 190, 60, "ai", ["AI 理解 · h2o 本地", "原话 → 29 道选择题", "每题带置信度"])}
+  ${B(470, 160, 170, 60, "gate", ["患者确认门", "逐项核对、划掉误判", "补选困扰程度"])}
+  ${B(690, 10, 95, 46, "data", ["skills/*.json", "量表包"])}
+  ${B(795, 10, 95, 46, "data", ["roles/*.json", "科室角色"])}
+  ${B(950, 10, 220, 46, "det", ["tests/golden.json · 25 条", "npm test 全绿才允许合并"])}
+  ${B(690, 85, 200, 145, "det", ["确定性引擎 engine.js", "validate()  校验答案", "score()  计分 / 维度", "findBand()  分级（区间唯一）", "crisis  单题触发", "followup  生成随访任务"], "纯函数")}
+  ${B(950, 85, 220, 60, "data", ["事件时间线 events[]", "只追加：评估 / 签字"])}
+  ${B(950, 165, 220, 55, "data", ["任务队列 tasks[]", "复测 / 加做 / 危机 / 产科时间表"])}
+  ${B(950, 290, 220, 50, "det", ["facts(pid) 事实包", "只读时间线，确定性"])}
+  ${B(690, 265, 200, 46, "det", ["模板简报", "确定性拼句"])}
+  ${B(690, 325, 200, 60, "ai", ["LLM 草稿 · Gemini", "仅参考", "checkNums() 数字核验"])}
+  ${B(470, 290, 170, 60, "gate", ["医生签字门", "审阅后签字", "才算正式结果"])}
+  <text x="20" y="440" class="sec">查询</text>
+  ${B(20, 455, 170, 50, "io", ["主任一句话提问", "自然语言"])}
+  ${B(240, 450, 190, 60, "ai", ["AI 理解 · h2o 本地", "提问 → 5 个选择题", "维度/程度/复测/变化/时间"])}
+  ${B(470, 450, 170, 60, "gate", ["条件显示给主任", "可直接改"])}
+  ${B(690, 450, 200, 60, "det", ["确定性过滤", "按条件查时间线"])}
+  ${B(950, 450, 220, 60, "io", ["名单 / 科室看板", "导出 Excel"])}
+  ${A([[190, 95], [688, 120]], false, "结构化答案", 380, 100)}
+  ${A([[190, 190], [238, 190]])}
+  ${A([[430, 190], [468, 190]])}
+  ${A([[640, 190], [688, 190]], false, "确认后的答案", 646, 182)}
+  ${A([[737, 56], [737, 83]])}${A([[842, 56], [842, 83]])}
+  ${A([[950, 33], [892, 33]], true, "门禁", 905, 50)}
+  ${A([[890, 115], [948, 115]])}${A([[890, 190], [948, 190]])}
+  ${A([[1060, 145], [1060, 163]], true)}
+  ${A([[1060, 220], [1060, 288]], true, "读", 1066, 258)}
+  ${A([[950, 305], [892, 290]])}${A([[950, 325], [892, 350]])}
+  ${A([[690, 288], [642, 310]])}${A([[690, 355], [642, 335]])}
+  ${A([[555, 290], [555, 250], [920, 250], [920, 130], [948, 130]], true, "签字事件写回时间线", 690, 246)}
+  ${A([[190, 480], [238, 480]])}${A([[430, 480], [468, 480]])}${A([[640, 480], [688, 480]])}${A([[890, 480], [948, 480]])}
+  ${A([[1170, 105], [1190, 105], [1190, 420], [800, 420], [800, 448]], true, "读时间线", 1100, 414)}
+  </svg>
+  <div class="legend"><span class="lg det"></span>确定性，可测试 <span class="lg ai"></span>AI，可能出错 <span class="lg gate"></span>人工确认门 <span class="lg data"></span>数据 / 配置 <span class="lg io"></span>输入输出</div>`;
+}
+function arch() {
+  $("#main").innerHTML = `
+  <p class="tag gray">技术 · 架构全图</p>
+  <h1>一张图看懂：哪里是 AI，哪里不是</h1>
+  <p class="lead">核心约束只有一条：<b>AI 的输出必须先过确认门，才能进入确定性层。</b>计分、分级、危机判断和随访，全部由纯函数 + JSON 配置完成，与 AI 无关。</p>
+  <div class="card" style="margin-top:14px;overflow-x:auto">${archSVG()}</div>
+
+  <h2 style="margin-top:28px">一次评估的完整流向</h2>
+  <div class="card"><table class="tech">
+    <tr><th>#</th><th>环节</th><th>代码位置</th><th>输入 → 输出</th><th>AI？</th></tr>
+    ${[["1", "采集", "app.js patient()", "表单点选，或原话 → h2o → 预填", "可选"],
+       ["2", "确认", "患者确认页", "预填答案 → 患者核对后的答案", "否（人）"],
+       ["3", "校验", "engine.validate()", "答案 → 缺题列表 / 非法值异常", "否"],
+       ["4", "计分", "engine.score()", "skill.scoring → total / domains（MENQOL 换算 否=1，k→k+2，不适用剔除）", "否"],
+       ["5", "分级", "engine.findBand()", "分值 → 唯一区间；命中 0 个或多个直接抛错", "否"],
+       ["6", "危机", "skill.crisis", "单题 ≥ 阈值 → crisis=true，压过总分报告", "否"],
+       ["7", "随访", "skill.followup + role.schedule", "→ tasks[]（after_days / 分娩日锚点）", "否"],
+       ["8", "落库", "record() → events[]", "只追加事件，不改历史", "否"],
+       ["9", "简报", "facts() → templateBrief() / LLM", "事实包 → 文字；LLM 文本经 checkNums() 比对", "LLM 仅参考"],
+       ["10", "签字", "医生端", "签字事件写回时间线，结果才算正式", "否（人）"]]
+      .map((r) => `<tr>${r.map((c, i) => `<td${i === 4 && c.startsWith("否") ? ' class="ok"' : i === 4 ? ' class="warn"' : ""}>${esc(c)}</td>`).join("")}</tr>`).join("")}
+  </table></div>
+
+  <div class="grid g2" style="margin-top:22px">
+    <div class="card"><h2>代码与配置</h2><pre class="tree">ai-native-clinic/
+├─ engine/engine.js     确定性层，纯函数，无 I/O
+├─ skills/              一个量表 = 一个 JSON
+│   ├─ phq9.json  menqol.json  epds.json
+├─ roles/               一个科室 = 一个 JSON
+│   ├─ menopause.json  obstetrics.json
+├─ tests/
+│   ├─ golden.json      25 条标准答案
+│   ├─ node-test.js     npm test
+│   ├─ intake_models.py 模型对比实测
+│   └─ record_ai.py     录制 AI 演示输出
+└─ app/                 静态前端（演示）
+    ├─ app.js  style.css
+    └─ ai_recorded.json 录制的真实模型输出</pre>
+    <p class="small muted">新增科室 = 新增 roles/*.json（+ 需要的话 skills/*.json）+ 补黄金用例。产科就是这样加的，engine.js 未改一行。</p></div>
+    <div class="card"><h2>信任边界</h2><table class="tech">
+      <tr><th>环节</th><th>出错方式</th><th>兜底</th></tr>
+      <tr><td>原话理解（h2o）</td><td>误报多于漏报</td><td>患者确认门 + 置信度 &lt; 0.9 标黄追问</td></tr>
+      <tr><td>提问解析（h2o）</td><td>条件理解错</td><td>条件显式展示可改；名单由确定性过滤产出</td></tr>
+      <tr><td>简报（Gemini）</td><td>编造、措辞偏差</td><td>标“参考”；数字自动核验；以事实包和医生签字为准</td></tr>
+      <tr><td>量表配置</td><td>区间重叠 / 漏档</td><td>findBand 唯一命中断言 + 黄金用例门禁</td></tr>
+    </table></div>
+  </div>
+
+  <h2 style="margin-top:28px">模型实测（11 月 5 日，虚构原话 3 段，人工标注 14 项）</h2>
+  <div class="card"><table class="tech">
+    <tr><th>模型</th><th>协议</th><th>漏报</th><th>误报</th><th>耗时 / 段</th><th>置信度</th><th>数据去向</th><th>用途</th></tr>
+    <tr><td>h2o-lightning-4B</td><td>systemone 决策</td><td>0</td><td>8</td><td>≈12 s</td><td>有</td><td>本机 llama.cpp</td><td>理解原话、解析提问</td></tr>
+    <tr><td>bivia</td><td>systemone 决策（state 须为字符串）</td><td>0</td><td>8</td><td>≈2 s</td><td>有</td><td>云端 API</td><td>备选</td></tr>
+    <tr><td>Gemini 3.8 flash</td><td>generateContent</td><td>0</td><td>0</td><td>13–24 s</td><td>无</td><td>云端网关</td><td>简报草稿，仅参考</td></tr>
+  </table><p class="small muted">决策模型只返回选择 / 是非 / 打分，不能生成文字；样本仅 3 段，结论只用于选型方向。</p></div>
+
+  <h2 style="margin-top:28px">部署形态</h2>
+  <div class="grid g2">
+    <div class="card"><span class="tag gray">现在 · 演示</span><p class="small">GitHub Pages 静态托管；数据存浏览器 localStorage；AI 输出为事先录制，页面不调用模型。</p></div>
+    <div class="card"><span class="tag amber">建议 · 院内试用（待信息科确认）</span><p class="small">同一套前端 + 小后端（事件表、任务表、SQLite 或 PostgreSQL），部署在院内服务器；h2o 跑在院内一台机器上（llama.cpp，4B 量化）；外部大模型默认关闭。engine.js 前后端共用。</p></div>
+  </div>`;
 }
 
 /* 患者端 */
@@ -576,15 +690,15 @@ function doctor() {
    <div class="card">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">${p.name} · ${p.age} 岁 · ${p.dept}</h2>
       <button class="btn" data-sign ${ev.some((e) => e.type === "assessment" && !e.signed) ? "" : "disabled"}>审阅并签字</button></div>
-    <div class="brief" style="margin-top:14px"><div class="ai">诊前简报 · ${model.base ? "模型改写自确定性事实" : "模板生成（可接入模型）"}</div>
+    <div class="brief" style="margin-top:14px"><div class="ai">诊前简报 · ${model.base ? "AI 改写（参考）" : "自动生成"}</div>
       <div id="brief">${templateBrief(sel).map((x) => `<p style="margin:6px 0">${esc(x)}</p>`).join("")}</div>
       ${model.base ? `<button class="link" data-ai>让模型改写</button>` : ""}</div>
     ${mq.length ? `<h3 style="margin-top:18px">MENQOL 各维度（医生版）</h3>${doctorMenqol(mq)}` : ""}
     ${["phq9", "epds"].filter((k) => assessments(sel, k).length).map((k) => doctorPhq(assessments(sel, k).at(-1))).join("")}
     ${tasksBlock(sel)}
-    <h3 style="margin-top:18px">时间线</h3>
+    <h3 style="margin-top:18px">就诊记录（按时间）</h3>
     <div class="tl">${ev.slice().reverse().map((e) => `<div><span class="muted small">${fmt(e.t)}</span> ${tlText(e)}</div>`).join("")}</div>
-    <details style="margin-top:14px"><summary class="small muted">接入模型（可选，OpenAI 兼容接口，仅存本机浏览器）</summary>
+    <details style="margin-top:14px"><summary class="small muted">技术人员设置：接入 AI（可选）</summary>
       <div class="grid" style="margin-top:8px"><input type="text" id="mb" placeholder="Base URL，如 http://localhost:11434/v1" value="${esc(model.base || "")}">
       <input type="text" id="mm" placeholder="模型名" value="${esc(model.model || "")}"><input type="password" id="mk" placeholder="API Key（本地模型可留空）" value="${esc(model.key || "")}">
       <button class="btn ghost" data-savemodel>保存</button></div></details>
@@ -674,7 +788,7 @@ async function boot() {
   if (!db) seed();
   document.querySelectorAll("#nav button").forEach((btn) => (btn.onclick = () => { view = btn.dataset.view; render(); window.scrollTo(0, 0); }));
   $("#reset").onclick = () => { localStorage.removeItem(KEY); pf = null; sel = null; seed(); render(); };
-  const h = location.hash.slice(1); if (["value", "ai", "board", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
+  const h = location.hash.slice(1); if (["value", "ai", "board", "arch", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
   render();
 }
 boot();

@@ -64,3 +64,12 @@ h1 br{display:block}
 .chip{display:inline-block;margin:3px 4px 3px 0;padding:3px 10px;border-radius:14px;font-size:13px;background:#eef1f2}.chip.hi{background:#dff1ec;color:#0b5c53}.chip.low{background:#fff3d6;color:#7a5600}.chip.fp{outline:2px solid #e2a3a3}.chip small{opacity:.65;margin-left:2px}
 .brief{margin:10px 0;line-height:1.75;font-size:14px}.num{font-weight:600;padding:0 1px;border-radius:3px}.num.ok{background:#e4f4ee}.num.bad{background:#fde5e5}
 .vs2{grid-template-columns:1fr 2fr;align-items:start}@media(max-width:820px){.vs2{grid-template-columns:1fr}}
+#nav{align-items:center}.grp{font-size:12px;color:var(--muted);margin:0 2px 0 10px;padding-left:10px;border-left:1px solid var(--line)}.grp:first-child{border:0;margin-left:0}
+#nav button.t.on{background:#33414a}
+.arch{width:100%;min-width:900px;height:auto;font-family:inherit}.arch .bx rect{stroke-width:1.5}.arch text{text-anchor:middle;font-size:11.5px;fill:#33414a}.arch text.t{font-weight:700;font-size:12.5px;fill:#1d2a31}
+.arch .det rect{fill:#e3f3f0;stroke:#0f7b6c}.arch .ai rect{fill:#fff3d6;stroke:#d99a2b}.arch .gate rect{fill:#e6efff;stroke:#3b6fd8}.arch .data rect{fill:#eef1f3;stroke:#8b98a1}.arch .io rect{fill:#fff;stroke:#b8c2c8}
+.arch .ar{fill:none;stroke:#5b6770;stroke-width:1.4}.arch .da{stroke-dasharray:5 4}.arch .lb{font-size:10.5px;fill:#5b6770;text-anchor:start}.arch .sec{text-anchor:start;font-size:12px;fill:#8b98a1;font-weight:700}.arch .f{text-anchor:end;font-size:10px;fill:#0f7b6c}
+.legend{font-size:13px;color:var(--muted);margin-top:8px}.lg{display:inline-block;width:14px;height:10px;border-radius:3px;margin:0 4px 0 12px;vertical-align:middle;border:1.5px solid}.lg.det{background:#e3f3f0;border-color:#0f7b6c}.lg.ai{background:#fff3d6;border-color:#d99a2b}.lg.gate{background:#e6efff;border-color:#3b6fd8}.lg.data{background:#eef1f3;border-color:#8b98a1}.lg.io{background:#fff;border-color:#b8c2c8}
+table.tech td,table.tech th{font-size:13px}.tech td.warn{color:#9a6a00;font-weight:600}.tech td.ok{color:var(--teal)}
+pre.tree{font-size:12.5px;line-height:1.55;background:#f6f8f9;padding:12px;border-radius:8px;overflow:auto}
+pre.tree{color:#1d2a31;opacity:1}
