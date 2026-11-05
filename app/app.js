@@ -227,7 +227,7 @@ function confirm() {
 }
 
 /* ---------- 价值页：一眼看出好处 ---------- */
-// 医院原始文档的规则，原样写成代码，用来和新系统当场对比
+// 医院原始文档的规则，原样写成代码，用来和新系统当场对比。2026-11-05 已与原件 PHQ-9.docx / MENQOL量表8分制.docx 逐条核对一致。
 function legacyPHQ(total) {
   const b = [[0, 4, "没有抑郁症状：您的情绪状态良好，在正常范围内"], [5, 9, "轻度抑郁"], [10, 14, "中度抑郁"], [15, 19, "中重度抑郁症"], [20, 27, "重度抑郁"]];
   return b.find(([lo, hi]) => total >= lo && total <= hi)[2];
@@ -250,7 +250,7 @@ const CASES = [
       return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → ${d.band.label}，给出对应建议`, risk: "中" }; } },
   { title: "MENQOL：潮热、盗汗、白天出汗的困扰程度分别为 3、2、2",
     run() { const r = score(SKILLS.menqol, ma({ m1: 3, m2: 2, m3: 2 })); const d = r.domains[0];
-      return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → ${d.band.label}，医生端给出非激素疗法参考`, risk: "中" }; } },
+      return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → ${d.band.label}，医生端调出科室预设备忘（需主任审定，不替医生决策）`, risk: "中" }; } },
 ];
 
 function value() {
@@ -299,7 +299,7 @@ function value() {
 
   <h2 style="margin-top:30px">试用的代价</h2>
   <div class="grid g3">
-    <div class="card"><h3>不换系统</h3><p class="small">不接 HIS，不改现有流程。纸质表可以照用，两套并行。</p></div>
+    <div class="card"><h3>不换系统</h3><p class="small">不接 HIS，不动现有系统。试用期纸质表可以照用、并行；效果好再由医院决定是否停用。</p></div>
     <div class="card"><h3>几乎不用培训</h3><p class="small">患者扫码即可填写，医生端只是一个网页，看完点一下确认。</p></div>
     <div class="card"><h3>随时可停</h3><p class="small">数据可以放在院内服务器，随时导出 Excel。不接 AI 也能完整运行。</p></div>
   </div>
@@ -573,7 +573,7 @@ function arch() {
 
   <h2 style="margin-top:28px">部署形态</h2>
   <div class="grid g2">
-    <div class="card"><span class="tag gray">现在 · 演示</span><p class="small">GitHub Pages 静态托管；数据存浏览器 localStorage；AI 输出为事先录制，页面不调用模型。</p></div>
+    <div class="card"><span class="tag gray">现在 · 演示</span><p class="small">仅为演示：全部是虚构数据，不代表上线形态；GitHub Pages 静态托管，数据只存在本浏览器；AI 输出为事先录制，页面不调用模型。</p></div>
     <div class="card"><span class="tag amber">建议 · 院内试用（待信息科确认）</span><p class="small">同一套前端 + 小后端（事件表、任务表、SQLite 或 PostgreSQL），部署在院内服务器；h2o 跑在院内一台机器上（llama.cpp，4B 量化）；外部大模型默认关闭。engine.js 前后端共用。</p></div>
   </div>`;
 }
