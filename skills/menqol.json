@@ -1,0 +1,319 @@
+{
+ "id": "menqol",
+ "name": "MENQOL 更年期生活质量量表（8 分制）",
+ "version": "0.1.0",
+ "status": "草案：分级区间与“不适用”规则需临床确认",
+ "source": "医院提供的《MENQOL量表8分制.docx》，按 Hark 审查意见修订（区间连续化、笔误、不适用选项、处方类建议仅医生端可见）",
+ "prompt": "过去一个月里，您是否经历过以下情况？如果有，它对您的困扰有多大？（0 = 完全不受困扰，6 = 极度困扰）",
+ "items": [
+  {
+   "id": "m1",
+   "text": "潮热（一阵一阵发热）",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m2",
+   "text": "盗汗（夜间睡着后出汗）",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m3",
+   "text": "白天出汗",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m4",
+   "text": "对自己的生活不满意",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m5",
+   "text": "感到焦虑或紧张",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m6",
+   "text": "记忆力减退",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m7",
+   "text": "做事不如以往得心应手",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m8",
+   "text": "感到抑郁、情绪低落或沮丧",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m9",
+   "text": "对别人缺乏耐心",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m10",
+   "text": "总想一个人待着",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m11",
+   "text": "胃肠胀气或胀痛（有放屁或嗳气）",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m12",
+   "text": "肌肉和关节疼痛",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m13",
+   "text": "感到疲劳或筋疲力尽",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m14",
+   "text": "睡眠有问题",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m15",
+   "text": "颈项部疼痛或头痛",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m16",
+   "text": "体力下降",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m17",
+   "text": "外表精神差",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m18",
+   "text": "感到缺乏精力",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m19",
+   "text": "皮肤干燥",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m20",
+   "text": "体重增加",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m21",
+   "text": "面部毛发增多",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m22",
+   "text": "皮肤外观或肤色改变",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m23",
+   "text": "感到肿胀不适",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m24",
+   "text": "腰背痛",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m25",
+   "text": "尿频",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m26",
+   "text": "大笑或咳嗽时无法控制小便",
+   "type": "yes_severity"
+  },
+  {
+   "id": "m27",
+   "text": "性欲改变",
+   "type": "yes_severity",
+   "allowNA": true
+  },
+  {
+   "id": "m28",
+   "text": "阴道干涩",
+   "type": "yes_severity",
+   "allowNA": true
+  },
+  {
+   "id": "m29",
+   "text": "回避性行为",
+   "type": "yes_severity",
+   "allowNA": true
+  }
+ ],
+ "glossary": {
+  "潮热": "突然一阵发热，常从胸口、脖子涌到脸上，可能伴随出汗、心慌，几分钟后消退。",
+  "盗汗": "夜里睡着后出汗，醒来发现衣服或枕头湿了。",
+  "不适用": "目前没有性生活，或不愿回答。这一维度将不计入总分。"
+ },
+ "scoring": {
+  "method": "menqol",
+  "map": "否=1；是且困扰 k=k+2（k 为 0–6）；不适用=不计分",
+  "domains": [
+   {
+    "id": "vasomotor",
+    "name": "血管舒缩症状",
+    "items": [
+     "m1",
+     "m2",
+     "m3"
+    ]
+   },
+   {
+    "id": "psychosocial",
+    "name": "心理社会状态",
+    "items": [
+     "m4",
+     "m5",
+     "m6",
+     "m7",
+     "m8",
+     "m9",
+     "m10"
+    ]
+   },
+   {
+    "id": "physical",
+    "name": "生理状态",
+    "items": [
+     "m11",
+     "m12",
+     "m13",
+     "m14",
+     "m15",
+     "m16",
+     "m17",
+     "m18",
+     "m19",
+     "m20",
+     "m21",
+     "m22",
+     "m23",
+     "m24",
+     "m25",
+     "m26"
+    ]
+   },
+   {
+    "id": "sexual",
+    "name": "性生活",
+    "items": [
+     "m27",
+     "m28",
+     "m29"
+    ]
+   }
+  ],
+  "range": [
+   1,
+   8
+  ]
+ },
+ "bands": [
+  {
+   "min": 1,
+   "max": 1,
+   "level": 0,
+   "label": "无症状"
+  },
+  {
+   "min": 1,
+   "minExclusive": true,
+   "max": 4,
+   "level": 1,
+   "label": "轻度"
+  },
+  {
+   "min": 4,
+   "minExclusive": true,
+   "max": 6,
+   "level": 2,
+   "label": "中度"
+  },
+  {
+   "min": 6,
+   "minExclusive": true,
+   "max": 8,
+   "level": 3,
+   "label": "重度"
+  }
+ ],
+ "domainAdvicePatient": {
+  "vasomotor": [
+   "保持环境凉爽通风，穿棉麻透气衣物，少吃辛辣，少喝咖啡和酒。",
+   "可以试试认知行为疗法、正念减压等非药物方法。",
+   "建议到更年期门诊就诊，由医生评估合适的治疗方案。"
+  ],
+  "psychosocial": [
+   "了解更年期知识，用正念、放松训练、呼吸练习减压。",
+   "认知行为疗法和结构化的更年期教育项目会有帮助。",
+   "建议到心理科就诊，评估是否需要进一步治疗。"
+  ],
+  "physical": [
+   "每晚睡 7–9 小时，规律做有氧和力量训练，增加蛋白质摄入。",
+   "规律作息、睡前少咖啡因和酒；关节痛可考虑理疗；泌尿症状可做盆底肌训练。",
+   "建议就诊，排查其他原因，必要时评估骨密度。"
+  ],
+  "sexual": [
+   "这是更年期常见的正常变化，可以使用水基或硅基润滑剂。",
+   "可以定期使用阴道保湿剂，症状持续请咨询医生。",
+   "建议到妇科或更年期门诊评估。"
+  ]
+ },
+ "domainAdviceDoctor": {
+  "vasomotor": [
+   "生活方式调整",
+   "非激素疗法：CBT、正念",
+   "无禁忌证者考虑 MHT，个体化方案"
+  ],
+  "psychosocial": [
+   "心理教育与放松训练",
+   "结构化心理干预（CBT）",
+   "转心理/精神科评估抑郁、焦虑障碍，必要时药物"
+  ],
+  "physical": [
+   "生活方式优化",
+   "针对性干预：睡眠、疼痛理疗、盆底肌训练",
+   "严重泌尿生殖症状考虑局部雌激素；骨密度评估；排查其他疾病"
+  ],
+  "sexual": [
+   "教育与润滑剂",
+   "阴道保湿剂；可咨询低剂量阴道雌激素",
+   "专科评估；局部雌激素；心理疏导"
+  ]
+ },
+ "crisis": [],
+ "followup": [
+  {
+   "when": {
+    "anyDomainLevelGte": 2
+   },
+   "after_days": 90,
+   "action": "复测 MENQOL"
+  },
+  {
+   "when": {
+    "domainLevelGte": {
+     "psychosocial": 2
+    }
+   },
+   "after_days": 0,
+   "action": "加做 PHQ-9"
+  }
+ ],
+ "rules_note": "区间按连续值划分：1.00 无症状，(1,4] 轻度，(4,6] 中度，(6,8] 重度。性生活维度全部“不适用”时，总分按其余 3 个维度计算，并在报告中注明。"
+}
