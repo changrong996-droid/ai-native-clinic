@@ -111,7 +111,7 @@ async function modelBrief(pid) {
 /* ---------- 视图 ---------- */
 function render() {
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
-  ({ value, board, concept, patient, doctor, skills, confirm })[view]();
+  ({ value, ai, board, concept, patient, doctor, skills, confirm })[view]();
 }
 
 /* ---------- 说明层：写给医生、科主任、信息科看 ---------- */
@@ -305,7 +305,7 @@ function value() {
   </div>
 
   <div class="card" style="margin-top:24px;background:var(--teal2);border-color:#cfe7e4">
-    <b>建议这样看：</b>先点上面的“运行”，再打开<a class="link" data-go="doctor">医生端</a>看看简报，最后打开<a class="link" data-go="board">科室看板</a>。如果想自己做一遍，可以进<a class="link" data-go="patient">患者端</a>。原理与规则见“原理”页，上线前需要确认的事项见“上线前确认”页。
+    <b>建议这样看：</b>先点上面的“运行”，再看<a class="link" data-go="ai">AI 能多做什么</a>，然后打开<a class="link" data-go="doctor">医生端</a>看看简报，最后打开<a class="link" data-go="board">科室看板</a>。如果想自己做一遍，可以进<a class="link" data-go="patient">患者端</a>。原理与规则见“原理”页，上线前需要确认的事项见“上线前确认”页。
   </div>`;
   document.querySelectorAll("[data-run]").forEach((b) => (b.onclick = () => {
     const i = b.dataset.run, r = CASES[i].run();
@@ -388,6 +388,80 @@ function board() {
     const blob = new Blob(["\ufeff" + rows.map((r) => r.join(",")).join("\n")], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "menqol_模拟数据.csv"; a.click();
   };
+}
+
+/* ---------- AI 能多做什么：真实模型输出（录制） ---------- */
+let AIREC = null, aiState = { u: 0, q: 0, gold: false };
+const GOLD = [["m1", "m2", "m14", "m6", "m9", "m24"], ["m7", "m13", "m18", "m10", "m19"], ["m26", "m29", "m15"]];
+const OKX = [["m3"], ["m16", "m17", "m8"], ["m27"]];
+const LV = { mild: 1, moderate: 2, severe: 3 }, PER = { "1m": 30, "3m": 90, "6m": 180 };
+const LBL = { domain: { vasomotor: "血管舒缩", psychosocial: "心理社会", physical: "生理", sexual: "性生活", any: "不限维度" },
+  level: { mild: "轻度及以上", moderate: "中度及以上", severe: "重度", any: "不限程度" },
+  retest: { done: "已复测", not_done: "未复测", any: "不限复测" }, change: { improved: "好转", worse: "加重", any: "不限变化" },
+  period: { "1m": "近一个月", "3m": "近三个月", "6m": "近半年", all: "不限时间" } };
+async function ai() {
+  if (!AIREC) AIREC = await (await fetch("app/ai_recorded.json")).json();
+  const R = AIREC;
+  $("#main").innerHTML = `
+  <p class="tag">AI 能多做什么</p>
+  <h1>同一件事，两种做法</h1>
+  <p class="lead">下面三个例子都是真实模型的输出（${esc(R.recorded_at)} 在本机录制），网页本身不连模型。分工很简单：<b>算分、分级和危机判断只由规则完成，AI 不碰</b>；AI 负责听懂和起草，它给出的内容都要经过规则或医生确认。</p>
+
+  <h2 style="margin-top:26px">① 听懂患者的原话 <span class="tag gray">本地模型 h2o · 数据不出本机</span></h2>
+  <div class="grid vs2">
+    <div class="card old"><h3>传统软件</h3><p>29 道题逐题点“有 / 没有”，再逐题选困扰程度。年纪大或者不识字的患者常常要护士陪着填。</p></div>
+    <div class="card"><div class="seg">${R.intake.map((x, i) => `<button class="${i === aiState.u ? "on" : ""}" data-u="${i}">原话 ${i + 1}</button>`).join("")}</div>
+      <blockquote>“${esc(R.intake[aiState.u].text)}”</blockquote>
+      <div id="chips"></div>
+      <p class="small muted">绿色为模型预填，黄色是模型把握不足的项，系统会追问。患者在确认页逐项核对，可以划掉误判，之后再选困扰程度，交给规则算分。用时 ${(R.intake[aiState.u].ms / 1000).toFixed(1)} 秒。
+      <label style="margin-left:8px"><input type="checkbox" id="gold" ${aiState.gold ? "checked" : ""}> 和人工标注对照</label></p></div>
+  </div>
+
+  <h2 style="margin-top:26px">② 主任用一句话提问 <span class="tag gray">本地模型只负责理解问题 · 名单由规则从数据里筛</span></h2>
+  <div class="grid vs2">
+    <div class="card old"><h3>传统软件</h3><p>只能看已经开发好的报表。想换一种问法，就得提需求、等厂商改报表。</p></div>
+    <div class="card"><div class="seg">${R.ask.map((x, i) => `<button class="${i === aiState.q ? "on" : ""}" data-q="${i}">提问 ${i + 1}</button>`).join("")}</div>
+      <blockquote>“${esc(R.ask[aiState.q].q)}”</blockquote><div id="askout"></div></div>
+  </div>
+
+  <h2 style="margin-top:26px">③ 给医生写简报 <span class="tag amber">Gemini · 仅供参考</span></h2>
+  <div class="grid vs2">
+    <div class="card old"><h3>传统软件 / 规则模板</h3><p>${esc([].concat(templateBrief("p1")).join(" "))}</p><p class="small muted">每句话都可靠，但措辞固定，也不会把几项变化联系起来看。</p></div>
+    <div class="card"><p class="small muted">同一份事实生成两次。<span class="ok">绿色</span>数字在规则算出的结果里找得到，<span class="bad">红色</span>找不到，需医生核对。</p>
+      ${R.brief.map((b, i) => `<div class="brief"><b>第 ${i + 1} 次</b> ${checkNums(b.text, R.brief_facts)}</div>`).join("")}
+      <p class="small muted">大模型会编造内容，所以简报只能当参考：每个数字都要自动比对，正式结论以规则结果和医生判断为准。</p></div>
+  </div>
+
+  <div class="card" style="margin-top:24px;background:var(--teal2);border-color:#cfe7e4"><b>一句话：</b>需要精确的部分继续由规则来做，繁琐的部分交给 AI。新增一个量表或科室，主要是给规则补一份配置，不需要重新开发一套软件。</div>`;
+  const it = R.intake[aiState.u].answers, g = new Set(GOLD[aiState.u]), ok = new Set(OKX[aiState.u]);
+  $("#chips").innerHTML = Object.entries(it).filter(([, v]) => v.choice === "present").map(([k, v]) => {
+    const low = v.confidence < 0.9, mark = aiState.gold ? (g.has(k) ? " ✓" : ok.has(k) ? " ≈" : " ✗") : "";
+    return `<span class="chip ${low ? "low" : "hi"}${aiState.gold && !g.has(k) && !ok.has(k) ? " fp" : ""}">${esc(SKILLS.menqol.items.find((q) => q.id === k).text)} <small>${Math.round(v.confidence * 100)}%</small>${mark}</span>`; }).join("") +
+    (aiState.gold ? `<p class="small">人工标注 ${g.size} 项，模型漏掉 ${[...g].filter((k) => it[k].choice !== "present").length} 项；✗ 为误判，留给患者划掉；≈ 为可算可不算。</p>` : "");
+  renderAsk();
+  document.querySelectorAll("[data-u]").forEach((b) => (b.onclick = () => { aiState.u = +b.dataset.u; ai(); }));
+  document.querySelectorAll("[data-q]").forEach((b) => (b.onclick = () => { aiState.q = +b.dataset.q; ai(); }));
+  $("#gold").onchange = (e) => { aiState.gold = e.target.checked; ai(); };
+}
+function renderAsk() {
+  const a = AIREC.ask[aiState.q], f = Object.fromEntries(Object.entries(a.filter).map(([k, v]) => [k, v.choice]));
+  const di = SKILLS.menqol.scoring.domains.findIndex((d) => d.id === f.domain), now = Date.now();
+  const rows = cohort().map((x, i) => ({ ...x, no: i + 1 })).filter((x) => {
+    if (PER[f.period] && now - x.t0 > PER[f.period] * DAY) return false;
+    if (f.retest === "done" && !x.retest) return false;
+    if (f.retest === "not_done" && x.retest) return false;
+    const doms = di >= 0 ? [di] : [0, 1, 2, 3];
+    if (LV[f.level] && !doms.some((j) => x.r0.domains[j].band && (f.level === "severe" ? x.r0.domains[j].band.level >= 3 : x.r0.domains[j].band.level >= LV[f.level]))) return false;
+    if (f.change !== "any") { if (!x.retest) return false; const ok = doms.some((j) => { const d = x.retest.domains[j].score - x.r0.domains[j].score; return f.change === "improved" ? d <= -0.5 : d >= 0.5; }); if (!ok) return false; }
+    return true; });
+  $("#askout").innerHTML = `<p class="small muted">模型理解成的筛选条件（${(a.ms / 1000).toFixed(1)} 秒）：</p>
+    <div>${Object.entries(a.filter).map(([k, v]) => `<span class="chip ${v.confidence < 0.9 ? "low" : "hi"}">${LBL[k][v.choice] || v.choice} <small>${Math.round(v.confidence * 100)}%</small></span>`).join("")}</div>
+    <p style="margin-top:10px">规则从模拟数据中筛出 <b>${rows.length}</b> 人${rows.length ? "：" : "。"}${rows.slice(0, 8).map((x) => `<span class="chip">${x.no} 号</span>`).join("")}${rows.length > 8 ? " …" : ""}</p>
+    <p class="small muted">条件显示在名单上方，主任一眼就能看出模型有没有理解对；理解错了，点一下就能改。名单本身不会因为模型而出错。</p>`;
+}
+function checkNums(text, facts) {
+  const pool = new Set((JSON.stringify(facts).match(/\d+(\.\d+)?/g) || []).map(Number));
+  return esc(text).replace(/\d+(\.\d+)?/g, (n) => `<span class="${pool.has(Number(n)) ? "ok" : "bad"} num">${n}</span>`);
 }
 
 /* 患者端 */
@@ -600,7 +674,7 @@ async function boot() {
   if (!db) seed();
   document.querySelectorAll("#nav button").forEach((btn) => (btn.onclick = () => { view = btn.dataset.view; render(); window.scrollTo(0, 0); }));
   $("#reset").onclick = () => { localStorage.removeItem(KEY); pf = null; sel = null; seed(); render(); };
-  const h = location.hash.slice(1); if (["value", "board", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
+  const h = location.hash.slice(1); if (["value", "ai", "board", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
   render();
 }
 boot();
