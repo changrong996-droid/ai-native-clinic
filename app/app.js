@@ -257,7 +257,8 @@ function value() {
   const k = cohortKPI();
   $("#main").innerHTML = `
   <h1>把纸质量表换成一张二维码<br>医生少做三件事，科室多出一份数据</h1>
-  <p class="lead">不换现有系统，也不改门诊流程。门诊贴一张二维码就能和现有做法并行试用，随时可以停。</p>
+  <p class="lead">三件事：免手算分、免翻纸对比、免手工登记复测。不换现有系统；新增的动作只有：贴码扫码、医生审阅签字、处理到期提醒。可以和现有做法并行试用，随时可以停。</p>
+  <p class="small muted">试用期以哪份为准由科室定；可只选部分时段或部分患者，避免同一患者重复填写。高危提醒目前只显示在医生网页上，系统不能保证有人及时看到；非门诊时段的处理与通知渠道（短信/电话）需医院来定。</p>
 
   <div class="grid g3 kpis" style="margin-top:20px">
     <div class="card"><div class="big">0 秒</div><p>提交即出分。<br>不用手算，也不用录入。</p></div>
@@ -293,7 +294,7 @@ function value() {
       <label>每份手工算分、录入（分钟）<input type="number" id="c2" value="3" step="0.5"></label>
       <label>医生每份翻看对比（分钟）<input type="number" id="c3" value="2" step="0.5"></label>
     </div>
-    <p class="small muted">默认值是假设，请改成贵院的实际数字。按每月 22 个工作日计算；有简报后，医生每份按 0.5 分钟计。</p>
+    <p class="small muted">默认值是假设，请改成贵院的实际数字。按每月 22 个工作日计算；有简报后，医生每份按 0.5 分钟计（这是假设值，请按实际改）；另外还会新增“审阅签字、处理提醒”等工作，别忘了算进去。</p>
     <div id="calcout" class="big2"></div>
   </div>
   <div class="card" style="margin-top:12px">
