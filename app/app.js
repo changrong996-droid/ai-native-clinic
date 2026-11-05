@@ -296,6 +296,11 @@ function value() {
     <p class="small muted">默认值是假设，请改成贵院的实际数字。按每月 22 个工作日计算；有简报后，医生每份按 0.5 分钟计。</p>
     <div id="calcout" class="big2"></div>
   </div>
+  <div class="card" style="margin-top:12px">
+    <b>别人的实测参考</b>
+    <p class="small">美国匹兹堡大学医学中心（UPMC）下属 45 家儿科社区门诊，把纸质问卷改成平板填写。在其中 12 家门诊现场计时：患者填完并交回，纸质平均 3 分 24 秒，平板平均 1 分 41 秒；抑郁筛查（PHQ-2）的完成率从 86.4% 升到 93.8%。</p>
+    <p class="small muted">只是参考，不是贵院的数字：对象是儿科门诊，系统与本原型不同；作者也说明时间对比可能受“被观察”影响，且平板偶尔卡住会打断就诊。出处：Hanmer 等，Applied Clinical Informatics 2021;12(2):310–319，<a class="link" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8046593" target="_blank" rel="noopener">原文</a>。</p>
+  </div>
 
   <h2 style="margin-top:30px">试用的代价</h2>
   <div class="grid g3">
