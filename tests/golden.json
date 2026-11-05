@@ -547,5 +547,109 @@
    },
    "followupIncludes": "加做 PHQ-9"
   }
+ },
+ {
+  "skill": "epds",
+  "answers": {
+   "e1": 0,
+   "e2": 0,
+   "e3": 0,
+   "e4": 0,
+   "e5": 0,
+   "e6": 0,
+   "e7": 0,
+   "e8": 0,
+   "e9": 0,
+   "e10": 0
+  },
+  "expect": {
+   "name": "全 0",
+   "total": 0,
+   "level": 0,
+   "crisis": false
+  }
+ },
+ {
+  "skill": "epds",
+  "answers": {
+   "e1": 1,
+   "e2": 1,
+   "e3": 1,
+   "e4": 1,
+   "e5": 1,
+   "e6": 1,
+   "e7": 1,
+   "e8": 1,
+   "e9": 1,
+   "e10": 0
+  },
+  "expect": {
+   "name": "9 分未达阳性",
+   "total": 9,
+   "level": 0,
+   "crisis": false
+  }
+ },
+ {
+  "skill": "epds",
+  "answers": {
+   "e1": 2,
+   "e2": 2,
+   "e3": 2,
+   "e4": 2,
+   "e5": 1,
+   "e6": 1,
+   "e7": 0,
+   "e8": 0,
+   "e9": 0,
+   "e10": 0
+  },
+  "expect": {
+   "name": "10 分筛查阳性",
+   "total": 10,
+   "level": 2,
+   "crisis": false
+  }
+ },
+ {
+  "skill": "epds",
+  "answers": {
+   "e1": 2,
+   "e2": 2,
+   "e3": 2,
+   "e4": 2,
+   "e5": 2,
+   "e6": 2,
+   "e7": 1,
+   "e8": 0,
+   "e9": 0,
+   "e10": 0
+  },
+  "expect": {
+   "name": "13 分很可能抑郁",
+   "total": 13,
+   "level": 3,
+   "crisis": false
+  }
+ },
+ {
+  "skill": "epds",
+  "answers": {
+   "e1": 0,
+   "e2": 0,
+   "e3": 0,
+   "e4": 0,
+   "e5": 0,
+   "e6": 0,
+   "e7": 0,
+   "e8": 0,
+   "e9": 0,
+   "e10": 1
+  },
+  "expect": {
+   "name": "只有第 10 题 = 1 也触发危机",
+   "total": 1,
+   "crisis": true
+  }
  }
 ]

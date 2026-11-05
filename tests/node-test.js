@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { runGolden } from "./run.js";
 const load = (p) => JSON.parse(readFileSync(new URL(p, import.meta.url)));
-const skills = { phq9: load("../skills/phq9.json"), menqol: load("../skills/menqol.json") };
+const skills = { phq9: load("../skills/phq9.json"), menqol: load("../skills/menqol.json"), epds: load("../skills/epds.json") };
 const res = runGolden(skills, load("./golden.json"));
 for (const r of res) console.log(r.pass ? "✓" : "✗", r.name, r.errs.join("；"));
 const failed = res.filter((r) => !r.pass).length;

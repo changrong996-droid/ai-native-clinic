@@ -48,3 +48,5 @@ pre{background:#0f1b22;color:#d6e6ea;border-radius:12px;padding:14px;overflow:au
 .chips button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;margin:4px 6px 4px 0;font-size:13px}
 .flow{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch}.flow .card{flex:1;min-width:150px}.flow .arrow{align-self:center;color:var(--muted)}
 input[type=text],input[type=password]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.banner{background:var(--amber2);color:#6b4a00;text-align:center;font-size:13px;padding:7px 16px;border-bottom:1px solid #f1dfb5}
+.explain ul{margin:4px 0 10px;padding-left:20px}.explain li{margin:3px 0;font-size:14px}

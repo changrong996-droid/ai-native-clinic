@@ -1,0 +1,10 @@
+{
+ "id": "menopause",
+ "name": "更年期门诊",
+ "skills": [
+  "menqol",
+  "phq9"
+ ],
+ "schedule": [],
+ "note": "MENQOL 为主量表；心理社会维度中度以上时加做 PHQ-9。"
+}

@@ -1,0 +1,22 @@
+{
+ "id": "obstetrics",
+ "name": "产科（孕产保健）",
+ "skills": [
+  "epds"
+ ],
+ "schedule": [
+  {
+   "anchor": "dueDate",
+   "offset_days": -42,
+   "action": "孕晚期 EPDS 筛查",
+   "skill": "epds"
+  },
+  {
+   "anchor": "deliveryDate",
+   "offset_days": 42,
+   "action": "产后 42 天 EPDS 筛查",
+   "skill": "epds"
+  }
+ ],
+ "note": "筛查时间点为原型假设，需医院确认。新增科室只需新增这样一个文件和它用到的量表文件。"
+}

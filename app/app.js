@@ -7,8 +7,8 @@ const DAY = 86400000;
 const fmt = (t) => { const d = new Date(t); return `${d.getMonth() + 1}月${d.getDate()}日`; };
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-const SKILLS = {};
-const KEY = "anc-v1";
+const SKILLS = {}, ROLES = {};
+const KEY = "anc-v2";
 let db, view = "concept", sel = null, pf = null;
 
 /* ---------- 时间线（每人一条只追加的事件流） ---------- */
@@ -30,7 +30,10 @@ function seed() {
   db = { patients: [
     { id: "p1", name: "王女士", age: 52, dept: "更年期门诊" },
     { id: "p2", name: "李女士", age: 48, dept: "更年期门诊" },
-    { id: "p3", name: "张女士", age: 55, dept: "更年期门诊" } ], events: [], tasks: [] };
+    { id: "p3", name: "张女士", age: 55, dept: "更年期门诊" },
+    { id: "p4", name: "刘女士", age: 31, dept: "产科（孕产保健）", deliveryDate: Date.now() - 41 * DAY, dueDate: Date.now() - 42 * DAY },
+    { id: "p5", name: "陈女士", age: 29, dept: "产科（孕产保健）", deliveryDate: Date.now() - 43 * DAY, dueDate: Date.now() - 45 * DAY } ], events: [], tasks: [] };
+  for (const p of db.patients) p.role = p.dept.startsWith("产科") ? "obstetrics" : "menopause";
   const now = Date.now();
   record("p1", "menqol", menqolAns({ m1: 5, m2: 5, m3: 4, m4: 2, m5: 3, m8: 2, m13: 3, m14: 4, m16: 2, m27: 1, m28: 2 }), now - 92 * DAY);
   db.events.at(-1).signed = true;
@@ -39,13 +42,29 @@ function seed() {
   record("p2", "phq9", { q1: 2, q2: 2, q3: 1, q4: 2, q5: 1, q6: 2, q7: 1, q8: 1, q9: 1 }, now - 40 * 60000);
   record("p3", "menqol", menqolAns({ m1: 1, m2: 0, m14: 2, m19: 1, m27: "na", m28: "na", m29: "na" }), now - 30 * DAY);
   db.events.at(-1).signed = true;
+  for (const p of db.patients) scheduleTasks(p);
+  // 刘女士：孕晚期筛查已做（8 分），产后 42 天筛查两天后到期
+  record("p4", "epds", { e1: 1, e2: 1, e3: 2, e4: 2, e5: 1, e6: 1, e7: 0, e8: 0, e9: 0, e10: 0 }, now - 80 * DAY);
+  db.events.at(-1).signed = true;
+  db.tasks.filter((t) => t.pid === "p4" && t.action.startsWith("孕晚期")).forEach((t) => (t.done = true));
+  // 陈女士：今天完成产后 42 天筛查，14 分
+  record("p5", "epds", { e1: 2, e2: 2, e3: 2, e4: 2, e5: 1, e6: 2, e7: 1, e8: 1, e9: 1, e10: 0 }, now - 3 * 3600000);
+  db.tasks.filter((t) => t.pid === "p5" && t.action.includes("EPDS 筛查")).forEach((t) => (t.done = true));
   save();
+}
+// 角色文件里的时间表：按预产期、分娩日等锚点自动生成随访任务
+function scheduleTasks(p) {
+  for (const s of ROLES[p.role].schedule || []) {
+    if (!p[s.anchor]) continue;
+    db.tasks.push({ id: uid(), pid: p.id, due: p[s.anchor] + s.offset_days * DAY, action: s.action, from: "schedule", done: false });
+  }
 }
 
 /* ---------- 语言层：简报（模板版；可选接入模型改写） ---------- */
 function facts(pid) {
   const p = db.patients.find((x) => x.id === pid);
   const out = { 患者: `${p.name}，${p.age} 岁，${p.dept}`, 量表: [] };
+  if (p.deliveryDate) out.阶段 = `产后第 ${Math.floor((Date.now() - p.deliveryDate) / DAY)} 天`;
   for (const sk of Object.keys(SKILLS)) {
     const list = assessments(pid, sk);
     if (!list.length) continue;
@@ -65,8 +84,9 @@ function facts(pid) {
 }
 function templateBrief(pid) {
   const F = facts(pid), s = [];
+  if (F.阶段) s.push(`${F.阶段}。`);
   const crisis = F.量表.find((q) => q.危机);
-  if (crisis) s.push(`⚠️ ${crisis.日期}${crisis.名称.split(" ")[0]} 第 9 题阳性，提示有自伤念头，需今天人工评估。`);
+  if (crisis) s.push(`⚠️ ${crisis.日期}${crisis.名称.split(" ")[0]} 自伤题阳性，提示有自伤念头，需今天人工评估。`);
   for (const q of F.量表) {
     const short = q.名称.split(" ")[0];
     let line = `${short}：${q.日期}总分 ${q.总分}（${q.分级}）`;
@@ -91,34 +111,119 @@ async function modelBrief(pid) {
 /* ---------- 视图 ---------- */
 function render() {
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
-  ({ concept, patient, doctor, skills })[view]();
+  ({ concept, patient, doctor, skills, confirm })[view]();
+}
+
+/* ---------- 说明层：写给医生、科主任、信息科看 ---------- */
+const EXPLAIN = {
+  patient: {
+    title: "这一页：患者怎么填问卷",
+    check: [
+      "患者用手机扫码就能填，不用装 App，一屏一题，老人能不能顺利填完？",
+      "题目一字不改，保证量表本身的有效性；看不懂可以点“这题是什么意思”。",
+      "自伤题只要不是“完全没有”，就不显示分数，改为显示求助信息，同时通知医生。",
+      "患者只看到通俗解读和生活建议，用药类建议只有医生能看到。",
+    ],
+    confirm: ["危机时患者看到的话和电话号码（现在用全国心理援助热线 12356）", "患者看到的解读文字是否合适", "患者怎么进入：扫码后是否需要手机号或就诊卡核验"],
+    try: "选“王女士”，做 PHQ-9：前 8 题选“完全不会”，第 9 题选“好几天”。",
+  },
+  doctor: {
+    title: "这一页：医生打开电脑看到什么",
+    check: [
+      "不用点进一个个报告：今天谁最要紧，系统已经排好序，危机排第一。",
+      "每个病人有一段诊前简报，写清楚这次和上次比哪里变了、还有什么没做。",
+      "简报里的每个数字都来自固定计算，不是 AI 编的；接入 AI 后它只负责把话说顺。",
+      "结果要医生点“审阅并签字”才算数；随访任务由规则自动生成，做完勾掉。",
+      "上方可切换科室：更年期门诊和产科共用同一套底座。",
+    ],
+    confirm: ["签字的含义：审阅即可，还是需要电子签名", "危机提醒发给谁、多长时间内要处理", "随访由谁执行：系统提醒患者，还是护士打电话"],
+    try: "依次点王女士、李女士，再切到“产科”看陈女士；点“主任问一句”里的问题。",
+  },
+  skills: {
+    title: "这一页：规则写在哪、怎么保证不出错",
+    check: [
+      "每个量表的题目、算分、分级、危机规则、随访规则，都写在一个文件里，医生可以逐条审。",
+      "每个科室也是一个文件：用哪些量表、什么时间点随访。产科就是这样加进来的，程序没改。",
+      "左边的“黄金用例”是一组标准答案。规则每改一次，系统都会自动核对一遍，全部通过才允许上线。",
+    ],
+    confirm: ["各量表的分级区间和措辞", "EPDS 用哪个中文版本、阈值是否用 10 分和 13 分", "产科筛查时间点"],
+    try: "点 menqol 看更年期量表的全部规则，再点“角色：产科”看科室文件有多短。",
+  },
+};
+const seen = (window.__seen = {});
+function explain(k) {
+  const e = EXPLAIN[k];
+  return `<details class="card explain" ${seen[k] ? "" : "open"} ontoggle="window.__seen&&(window.__seen['${k}']=1)"><summary><span class="tag amber">说明</span><b>${e.title}</b><span class="small muted">（点击展开/收起）</span></summary>
+    <h3>这里想验证什么</h3><ul>${e.check.map((x) => `<li>${x}</li>`).join("")}</ul>
+    <h3>需要医院拍板的</h3><ul>${e.confirm.map((x) => `<li>${x}</li>`).join("")}</ul>
+    <p class="small"><b>试一下：</b>${e.try}</p>
+    <p class="small muted">全部待确认事项汇总在“待确认”页。</p></details>`;
 }
 
 function concept() {
   $("#main").innerHTML = `
-  <p class="tag">探索原型</p>
-  <h1>不做“七个系统”，只做三样东西</h1>
-  <p class="lead">一条时间线、一组技能包、几个角色。量表、规则、报告口径都写在人和 AI 都读得懂的文件里；计分和危机判断用代码锁死，AI 只负责说人话。</p>
+  <p class="tag amber">讨论用原型 · 不是交付成品</p>
+  <h1>先用一个门诊，把方向看明白</h1>
+  <p class="lead">这是一个可以点的样品，用来和医院一起确认“系统该长什么样”。数据全部是虚构的，量表文字和分级都还是草案。请重点看思路和流程，界面和细节后面都可以改。</p>
+
   <div class="grid g3" style="margin-top:20px">
-    <div class="card"><h2>① 时间线</h2><p>每个患者一条只追加的事件流：填表、结果、签字、随访都是事件。没有几十张业务表，报表就是在时间线上现算。</p></div>
-    <div class="card"><h2>② 技能包</h2><p>一个量表 = 一个文件：题目、计分、连续分级、危机规则、患者版和医生版文案、随访规则。改需求就是改文件，测试全绿才生效。</p></div>
-    <div class="card"><h2>③ 角色</h2><p>“更年期系统”“精神系统”只是不同角色挂不同技能包，共用一条时间线。加一个科室 = 加一个文件夹。</p></div>
+    <div class="card"><h3>它是什么</h3><p class="small">一个“量表测评 + 结果解读 + 医生审阅 + 随访提醒”的轻量系统。现在做了更年期门诊和产科两个科室。</p></div>
+    <div class="card"><h3>它不是什么</h3><p class="small">不是 HIS，也不替代医生诊断。当前不连医院现有系统，不存真实病人数据。</p></div>
+    <div class="card"><h3>为什么这样做</h3><p class="small">七个健康管理系统的核心流程其实一样：填表、算分、出报告、医生看、定期随访。把这条流程做好，七个科室都能复用。</p></div>
   </div>
-  <h2 style="margin-top:28px">两层分离</h2>
+
+  <h2 style="margin-top:28px">一个病人在系统里走一遍</h2>
   <div class="flow">
-    <div class="card"><span class="tag">确定性层 · 代码</span><p class="small">计分、分级、PHQ-9 第 9 题危机规则、随访触发、签字。同样输入永远同样结果，有黄金用例守着。</p></div>
-    <div class="arrow">→</div>
-    <div class="card"><span class="tag amber">语言层 · AI</span><p class="small">解释题目、写诊前简报、回答主任的问题。只能引用确定性层给出的事实。</p></div>
-    <div class="arrow">→</div>
-    <div class="card"><span class="tag gray">人</span><p class="small">任何临床结论要医生签字才生效。</p></div>
+    <div class="card"><b>1 扫码填表</b><p class="small">患者手机上一题一屏，不懂可以问。</p></div><div class="arrow">→</div>
+    <div class="card"><b>2 自动算分</b><p class="small">按量表规则计算，结果固定、可核对。</p></div><div class="arrow">→</div>
+    <div class="card"><b>3 风险分流</b><p class="small">有自伤念头立即转人工，不等报告。</p></div><div class="arrow">→</div>
+    <div class="card"><b>4 医生审阅</b><p class="small">打开就是简报和前后对比，确认后签字。</p></div><div class="arrow">→</div>
+    <div class="card"><b>5 随访</b><p class="small">按规则和时间点自动提醒复测。</p></div>
   </div>
-  <h2 style="margin-top:28px">3 分钟体验</h2>
+
+  <h2 style="margin-top:28px">AI 在这里做什么、不做什么</h2>
+  <div class="grid g3">
+    <div class="card"><span class="tag">固定规则 · 程序</span><p class="small">算分、分级、危机判断、随访时间。同样的答案永远得到同样的结果，每次修改都要通过一组标准答案的核对。</p></div>
+    <div class="card"><span class="tag amber">AI · 只管说话</span><p class="small">给患者解释题目，帮医生把结果写成简报，回答主任的统计问题。它只能引用程序算出的结果，不能自己下结论。</p></div>
+    <div class="card"><span class="tag gray">医生 · 最后把关</span><p class="small">任何临床意见都要医生确认签字才生效。当前演示没有接 AI，用模板代替，流程不受影响。</p></div>
+  </div>
+
+  <h2 style="margin-top:28px">怎么加新科室</h2>
+  <div class="card"><p>每个科室是一个很短的配置文件，写明用哪些量表、什么时间随访；每个量表也是一个文件。产科就是这样加进来的：新增两个文件，程序一行没改。其余五个科室（儿童心理、营养、妇女保健、精神等）也按同样方式添加。</p></div>
+
+  <h2 style="margin-top:28px">建议这样看（约 3 分钟）</h2>
   <div class="card"><ol>
-    <li>去 <b>医生端</b>：李女士排在第一位，红色危机；王女士的简报已经写好，血管舒缩维度比 3 个月前明显好转，但心理社会维度升到中度，系统已自动加了一条“加做 PHQ-9”。</li>
-    <li>去 <b>患者端</b>：以王女士身份做 PHQ-9。前 8 题都选“完全不会”，第 9 题选“好几天”。原文档会判“情绪良好”，这里会立刻转危机流程。</li>
-    <li>回 <b>医生端</b>：王女士已经顶到第一位。</li>
-    <li>去 <b>技能包与测试</b>：看规则长什么样，20 条黄金用例当场跑。</li>
+    <li><b>医生端</b>：李女士因危机排在第一。点王女士，看诊前简报：潮热明显好转，情绪维度加重，系统已经安排了“加做 PHQ-9”。</li>
+    <li><b>患者端</b>：用王女士的身份做 PHQ-9，前 8 题选“完全不会”，第 9 题选“好几天”。按原来的文档，这会判为“情绪良好”；这里会立即转入危机流程。</li>
+    <li>回到<b>医生端</b>：王女士已经排到最前面。再切到“产科”，看陈女士产后 42 天的筛查结果。</li>
+    <li><b>技能包与测试</b>：看规则文件长什么样，25 条标准答案当场核对。</li>
+    <li><b>待确认</b>：需要医院拍板的事项都列在这里。</li>
   </ol></div>`;
+}
+
+/* 待确认清单 */
+const CONFIRM = [
+  ["量表与规则", "PHQ-9 第 9 题、EPDS 第 10 题只要不是 0 分，就转入危机流程", "自伤念头不能等报告；原文档没有这条规则", "心理科 / 医务科"],
+  ["量表与规则", "医院是否有危机干预预案？由谁接手，多长时间内处理？", "系统只负责提醒，后续必须有人处理", "医务科"],
+  ["量表与规则", "危机时给患者看的热线：12356，还是本院电话？", "目前暂用全国统一心理援助热线 12356", "心理科"],
+  ["量表与规则", "MENQOL 分级改为连续区间：1 / 1–4 / 4–6 / 6–8", "原文档按整数分档，1.33 这类得分落不进任何一档", "更年期门诊"],
+  ["量表与规则", "MENQOL 性生活维度增加“不适用”，总分按其余三个维度计算", "没有性生活的患者，否则总分会被拉低", "更年期门诊"],
+  ["量表与规则", "激素治疗、雌激素等用药建议只给医生看", "患者端只显示生活方式建议", "更年期门诊"],
+  ["量表与规则", "PHQ-9 结果措辞用“抑郁症状”，而不是“抑郁症”", "自评量表不能作为诊断", "心理科"],
+  ["量表与规则", "EPDS 采用哪个中文版本？阈值用 10 分、13 分，还是本院标准？", "医院资料中没有这份量表，由原型补充", "产科 / 心理科"],
+  ["流程", "产科筛查时间点：孕晚期一次、产后 42 天一次，是否合适？", "原型的假设", "产科"],
+  ["流程", "随访由谁执行：系统提醒患者自己复测，还是护士打电话？", "影响是否需要护士工作台", "各科室"],
+  ["流程", "医生“签字”是审阅确认，还是需要正式电子签名？", "电子签名涉及 CA 和合规", "医务科 / 信息科"],
+  ["接入与数据", "患者如何识别身份：手机号、就诊卡，还是对接 HIS？", "决定是否需要和医院现有系统对接", "信息科"],
+  ["接入与数据", "数据放在哪里：院内服务器还是云上？", "决定部署方式", "信息科"],
+  ["接入与数据", "是否允许使用 AI 模型？只能用院内部署的模型，还是可以调用外部服务？", "不接 AI 也能运行；接入后只用于把话说顺", "信息科 / 院办"],
+  ["范围", "七个科室先上哪几个？", "建议先做 1 到 2 个，跑通后再复制", "院方 / 业务对接人"],
+];
+function confirm() {
+  $("#main").innerHTML = `<p class="tag amber">待确认</p><h1>需要医院拍板的事项</h1>
+  <p class="lead">以下是原型里先按我们的理解做出的决定。请逐条看：同意就打勾，不同意请写出医院的做法。反馈时只要报编号即可。</p>
+  <div class="card" style="margin-top:16px"><table><tr><th>#</th><th>类别</th><th>需要确认</th><th>为什么要问</th><th>建议由谁确认</th></tr>
+  ${CONFIRM.map((c, i) => `<tr><td>${i + 1}</td><td class="small muted">${c[0]}</td><td>${c[1]}</td><td class="small">${c[2]}</td><td class="small muted">${c[3]}</td></tr>`).join("")}</table></div>`;
 }
 
 /* 患者端 */
@@ -130,9 +235,9 @@ function patient() {
     const todo = db.tasks.filter((t) => t.pid === pf.pid && !t.done && !t.staff && t.due <= Date.now() + DAY);
     body = `<div class="top">扫码进入 · ${esc(p.dept)}</div>
       <h2>您好，${esc(p.name)}</h2>
-      ${todo.length ? `<div class="bubble">医生请您今天完成：${todo.map((t) => esc(t.action)).join("、")}</div>` : ""}
+      ${todo.length ? `<div class="bubble">医生请您近期完成：${todo.map((t) => esc(t.action)).join("、")}</div>` : ""}
       <p class="muted small">请选择要填写的问卷：</p>
-      ${Object.values(SKILLS).map((s) => `<button class="opt" data-start="${s.id}"><b>${esc(s.name)}</b><br><span class="small muted">${s.items.length} 题 · 约 ${Math.ceil(s.items.length / 6)} 分钟</span></button>`).join("")}
+      ${ROLES[p.role].skills.map((id) => SKILLS[id]).map((s) => `<button class="opt" data-start="${s.id}"><b>${esc(s.name)}</b><br><span class="small muted">${s.items.length} 题 · 约 ${Math.ceil(s.items.length / 6)} 分钟</span></button>`).join("")}
       <div style="flex:1"></div>`;
   } else if (pf.phase === "q") {
     const s = SKILLS[pf.skill], it = s.items[pf.idx], a = pf.answers[it.id];
@@ -165,12 +270,9 @@ function patient() {
   }
   $("#main").innerHTML = `<div class="grid g2">
     <div><div class="phone">${body}</div></div>
-    <div class="card"><h2>你在看什么</h2>
-      <p>患者扫码就能填，不装 App。题目是<b>原题原文</b>，保证量表信效度；卡片之间可以随时问“这是什么意思”，由助手解释（这里用技能包里的词表模拟，接上模型后可以自由问答）。</p>
-      <p>提交后，<b>计分和危机判断由代码完成</b>，AI 不参与。第 9 题只要不是“完全不会”，常规报告就会中止，直接给出危机文案和 12356 热线，同时推到医生端最上面。</p>
-      <p>MENQOL 的分级用连续区间，1.33 这类分数不会再“无处安放”；性生活维度可以选“不适用”，不会再把总分拉低。处方类建议只在医生端出现。</p>
+    <div class="card">${explain("patient")}
       <h3 style="margin-top:16px">切换患者</h3>
-      <div class="row">${db.patients.map((x) => `<button class="btn ${x.id === pf.pid ? "" : "ghost"}" data-pid="${x.id}">${x.name}</button>`).join("")}</div>
+      <div class="row">${db.patients.map((x) => `<button class="btn ${x.id === pf.pid ? "" : "ghost"}" data-pid="${x.id}">${x.name} · ${ROLES[x.role].name.slice(0, 2)}</button>`).join("")}</div>
     </div></div>`;
   bindPatient();
 }
@@ -214,14 +316,16 @@ function worklist() {
     return { p, crisis, unsigned, due, lastT: last ? last.t : 0, rank: (crisis ? 100 : 0) + unsigned.length * 10 + due.length };
   }).sort((a, b) => b.rank - a.rank || b.lastT - a.lastT);
 }
+let roleSel = "menopause";
 function doctor() {
-  const wl = worklist();
+  const wl = worklist().filter((w) => w.p.role === roleSel);
   if (!sel || !db.patients.find((p) => p.id === sel)) sel = wl[0].p.id;
   const p = db.patients.find((x) => x.id === sel), ev = eventsOf(sel);
   const mq = assessments(sel, "menqol");
   const model = JSON.parse(localStorage.getItem("anc-model") || "{}");
-  $("#main").innerHTML = `<div class="grid g2">
+  $("#main").innerHTML = `${explain("doctor")}<div class="grid g2" style="margin-top:16px">
    <div>
+    <div class="row" style="margin:0 0 10px">${Object.values(ROLES).map((r) => `<button class="btn ${r.id === roleSel ? "" : "ghost"}" data-role="${r.id}">${r.name}</button>`).join("")}</div>
     <h2>今天要处理的</h2>
     <div class="list">${wl.map((w) => `<div class="it ${w.p.id === sel ? "on" : ""} ${w.crisis ? "crit" : ""}" data-sel="${w.p.id}">
       <div><b>${w.p.name}</b> <span class="small muted">${w.p.age} 岁</span><br>
@@ -238,7 +342,7 @@ function doctor() {
       <div id="brief">${templateBrief(sel).map((x) => `<p style="margin:6px 0">${esc(x)}</p>`).join("")}</div>
       ${model.base ? `<button class="link" data-ai>让模型改写</button>` : ""}</div>
     ${mq.length ? `<h3 style="margin-top:18px">MENQOL 各维度（医生版）</h3>${doctorMenqol(mq)}` : ""}
-    ${assessments(sel, "phq9").length ? doctorPhq(assessments(sel, "phq9").at(-1)) : ""}
+    ${["phq9", "epds"].filter((k) => assessments(sel, k).length).map((k) => doctorPhq(assessments(sel, k).at(-1))).join("")}
     ${tasksBlock(sel)}
     <h3 style="margin-top:18px">时间线</h3>
     <div class="tl">${ev.slice().reverse().map((e) => `<div><span class="muted small">${fmt(e.t)}</span> ${tlText(e)}</div>`).join("")}</div>
@@ -263,7 +367,7 @@ function doctorMenqol(list) {
 }
 function doctorPhq(e) {
   const r = e.result;
-  return `<h3 style="margin-top:18px">PHQ-9（${fmt(e.t)}）</h3>
+  return `<h3 style="margin-top:18px">${SKILLS[e.skill].name.split(" ")[0]}（${fmt(e.t)}）</h3>
    <p>总分 <b>${r.total}</b>，${r.band.label}${r.band.doctor ? "。" + esc(r.band.doctor) : ""}</p>
    ${r.crisis ? `<div class="crisis">${esc(r.crises.map((c) => c.doctor).join(" "))}</div>` : ""}`;
 }
@@ -274,6 +378,7 @@ function tlText(e) {
 }
 function bindDoctor() {
   const m = $("#main");
+  m.querySelectorAll("[data-role]").forEach((b) => (b.onclick = () => { roleSel = b.dataset.role; sel = null; doctor(); }));
   m.querySelectorAll("[data-sel]").forEach((b) => (b.onclick = () => { sel = b.dataset.sel; doctor(); }));
   m.querySelectorAll("[data-done]").forEach((b) => (b.onclick = () => {
     const t = db.tasks.find((x) => x.id === b.dataset.done); t.done = true;
@@ -308,27 +413,30 @@ function skills() {
   const res = runGolden(SKILLS, window.__golden);
   const pass = res.filter((r) => r.pass).length;
   $("#main").innerHTML = `<div class="grid g2">
+   <div style="grid-column:1/-1">${explain("skills")}</div>
    <div class="card"><h2>黄金用例 <span class="${pass === res.length ? "ok" : "bad"}">${pass}/${res.length} 通过</span></h2>
     <p class="small muted">每改一次技能包，这些用例都要重新跑一遍，全部通过才允许上线。AI 帮忙改规则也一样，必须先过测试，再由人确认。</p>
     <table>${res.map((r) => `<tr><td class="${r.pass ? "ok" : "bad"}">${r.pass ? "✓" : "✗"}</td><td class="small">${esc(r.name)}${r.errs.length ? `<br><span class="bad">${esc(r.errs.join("；"))}</span>` : ""}</td></tr>`).join("")}</table></div>
    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">技能包原文</h2>
-    <div class="row">${Object.values(SKILLS).map((s) => `<button class="btn ghost" data-sk="${s.id}">${s.id}</button>`).join("")}</div></div>
-    <p class="small muted">这就是“系统”的全部业务规则。医生能审，AI 能执行，改需求就是改这个文件。</p>
+    <div class="row">${Object.values(SKILLS).map((s) => `<button class="btn ghost" data-sk="${s.id}">${s.id}</button>`).join("")}${Object.values(ROLES).map((r) => `<button class="btn ghost" data-ro="${r.id}">角色：${r.name.slice(0, 3)}</button>`).join("")}</div></div>
+    <p class="small muted">量表文件 = 一个量表的全部规则；角色文件 = 一个科室用哪些量表、什么时候随访。产科就是这样加进来的：一个角色文件 + 一个量表文件，代码没改。</p>
     <pre id="skjson"></pre></div></div>`;
   const show = (id) => ($("#skjson").textContent = JSON.stringify(SKILLS[id], null, 2));
   document.querySelectorAll("[data-sk]").forEach((b) => (b.onclick = () => show(b.dataset.sk)));
+  document.querySelectorAll("[data-ro]").forEach((b) => (b.onclick = () => ($("#skjson").textContent = JSON.stringify(ROLES[b.dataset.ro], null, 2))));
   show("phq9");
 }
 
 /* ---------- 启动 ---------- */
 async function boot() {
-  const [a, b, g] = await Promise.all(["skills/phq9.json", "skills/menqol.json", "tests/golden.json"].map((u) => fetch(u).then((r) => r.json())));
-  SKILLS.phq9 = a; SKILLS.menqol = b; window.__golden = g;
+  const files = ["skills/phq9.json", "skills/menqol.json", "skills/epds.json", "roles/menopause.json", "roles/obstetrics.json", "tests/golden.json"];
+  const [a, b, c, r1, r2, g] = await Promise.all(files.map((u) => fetch(u).then((r) => r.json())));
+  SKILLS.phq9 = a; SKILLS.menqol = b; SKILLS.epds = c; ROLES.menopause = r1; ROLES.obstetrics = r2; window.__golden = g;
   db = JSON.parse(localStorage.getItem(KEY) || "null");
   if (!db) seed();
   document.querySelectorAll("#nav button").forEach((btn) => (btn.onclick = () => { view = btn.dataset.view; render(); window.scrollTo(0, 0); }));
   $("#reset").onclick = () => { localStorage.removeItem(KEY); pf = null; sel = null; seed(); render(); };
-  const h = location.hash.slice(1); if (["concept", "patient", "doctor", "skills"].includes(h)) view = h;
+  const h = location.hash.slice(1); if (["concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
   render();
 }
 boot();
