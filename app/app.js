@@ -206,7 +206,7 @@ const CONFIRM = [
   ["量表与评分标准", "PHQ-9 第 9 题、EPDS 第 10 题只要不是 0 分，就转入危机流程", "自伤念头不能等报告；原文档没有这条规则", "心理科 / 医务科"],
   ["量表与评分标准", "医院是否有危机干预预案？由谁接手，多长时间内处理？", "系统只负责提醒，后续必须有人处理", "医务科"],
   ["量表与评分标准", "危机时给患者看的热线：12356，还是本院电话？", "目前暂用全国统一心理援助热线 12356", "心理科"],
-  ["量表与评分标准", "MENQOL 分级改为连续区间：1 / 1–4 / 4–6 / 6–8", "原文档按整数分档，1.33 这类得分落不进任何一档", "更年期门诊"],
+  ["量表与评分标准", "MENQOL 分级改为连续区间：1 分；大于 1 至 4 分；大于 4 至 6 分；大于 6 至 8 分", "原文档按整数分档，1.33 这类得分落不进任何一档", "更年期门诊"],
   ["量表与评分标准", "MENQOL 性生活维度增加“不适用”，总分按其余三个维度计算", "没有性生活的患者，否则总分会被拉低", "更年期门诊"],
   ["量表与评分标准", "激素治疗、雌激素等用药建议只给医生看", "患者端只显示生活方式建议", "更年期门诊"],
   ["量表与评分标准", "PHQ-9 结果措辞用“抑郁症状”，而不是“抑郁症”", "自评量表不能作为诊断", "心理科"],
@@ -217,11 +217,11 @@ const CONFIRM = [
   ["接入与数据", "患者如何识别身份：手机号、就诊卡，还是对接 HIS？", "决定是否需要和医院现有系统对接", "信息科"],
   ["接入与数据", "数据放在哪里：院内服务器还是云上？", "决定部署方式", "信息科"],
   ["接入与数据", "是否允许使用 AI 模型？只能用院内部署的模型，还是可以调用外部服务？", "不接 AI 也能运行；接入后只用于把话说顺", "信息科 / 院办"],
-  ["范围", "七个科室先上哪几个？", "建议先做 1 到 2 个，跑通后再复制", "院方 / 业务对接人"],
+  ["范围", "七个科室先上哪几个？", "七科：孕产、儿童心理、个体营养、营养分析、妇女、精神、更年期；建议先做 1 到 2 个，跑通后再复制", "院方 / 业务对接人"],
 ];
 function confirm() {
   $("#main").innerHTML = `<p class="tag amber">上线前确认</p><h1>真正上线前，需要医院定下来的事</h1>
-  <p class="lead">试用阶段可以先按默认做法跑起来；以下事项在正式上线前逐条确认即可，不影响先看效果。</p>
+  <p class="lead">分两类：用页面里的虚构数据体验，不需要任何确认；用真实患者试用之前，下面每一条都必须由医院定。</p>
   <div class="card" style="margin-top:16px"><table><tr><th>#</th><th>类别</th><th>需要确认</th><th>为什么要问</th><th>建议由谁确认</th></tr>
   ${CONFIRM.map((c, i) => `<tr><td>${i + 1}</td><td class="small muted">${c[0]}</td><td>${c[1]}</td><td class="small">${c[2]}</td><td class="small muted">${c[3]}</td></tr>`).join("")}</table></div>`;
 }
@@ -715,7 +715,7 @@ function doctor() {
 function tasksBlock(pid) {
   const ts = db.tasks.filter((t) => t.pid === pid && !t.done).sort((a, b) => a.due - b.due);
   if (!ts.length) return "";
-  return `<h3 style="margin-top:18px">随访任务</h3><table>${ts.map((t) => `<tr><td>${esc(t.action)}${t.staff ? ' <span class="tag red">医护</span>' : ' <span class="tag">患者</span>'}</td><td class="small muted">${t.due <= Date.now() ? "今天" : fmt(t.due)}</td><td style="text-align:right"><button class="link" data-done="${t.id}">标记完成</button></td></tr>`).join("")}</table>`;
+  return `<h3 style="margin-top:18px">随访任务</h3><table>${ts.map((t) => `<tr><td>${esc(t.action)}${t.staff ? ' <span class="tag red">责任人由医院指定</span>' : ' <span class="tag">患者</span>'}</td><td class="small muted">${t.due <= Date.now() ? "今天" : fmt(t.due)}</td><td style="text-align:right"><button class="link" data-done="${t.id}">标记完成</button></td></tr>`).join("")}</table>`;
 }
 function doctorMenqol(list) {
   const cur = list.at(-1).result, prev = list.at(-2)?.result, sk = SKILLS.menqol;
