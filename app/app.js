@@ -9,7 +9,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 
 const SKILLS = {}, ROLES = {};
 const KEY = "anc-v2";
-let db, view = "concept", sel = null, pf = null;
+let db, view = "value", sel = null, pf = null;
 
 /* ---------- 时间线（每人一条只追加的事件流） ---------- */
 function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
@@ -111,7 +111,7 @@ async function modelBrief(pid) {
 /* ---------- 视图 ---------- */
 function render() {
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
-  ({ concept, patient, doctor, skills, confirm })[view]();
+  ({ value, board, concept, patient, doctor, skills, confirm })[view]();
 }
 
 /* ---------- 说明层：写给医生、科主任、信息科看 ---------- */
@@ -157,13 +157,13 @@ function explain(k) {
     <h3>这里想验证什么</h3><ul>${e.check.map((x) => `<li>${x}</li>`).join("")}</ul>
     <h3>需要医院拍板的</h3><ul>${e.confirm.map((x) => `<li>${x}</li>`).join("")}</ul>
     <p class="small"><b>试一下：</b>${e.try}</p>
-    <p class="small muted">全部待确认事项汇总在“待确认”页。</p></details>`;
+    <p class="small muted">上线前需要确认的事项汇总在“上线前确认”页。</p></details>`;
 }
 
 function concept() {
   $("#main").innerHTML = `
-  <p class="tag amber">讨论用原型 · 不是交付成品</p>
-  <h1>先用一个门诊，把方向看明白</h1>
+  <p class="tag gray">原理 · 给技术与信息科</p>
+  <h1>原理：为什么七个科室能共用一套</h1>
   <p class="lead">这是一个可以点的样品，用来和医院一起确认“系统该长什么样”。数据全部是虚构的，量表文字和分级都还是草案。请重点看思路和流程，界面和细节后面都可以改。</p>
 
   <div class="grid g3" style="margin-top:20px">
@@ -196,8 +196,8 @@ function concept() {
     <li><b>医生端</b>：李女士因危机排在第一。点王女士，看诊前简报：潮热明显好转，情绪维度加重，系统已经安排了“加做 PHQ-9”。</li>
     <li><b>患者端</b>：用王女士的身份做 PHQ-9，前 8 题选“完全不会”，第 9 题选“好几天”。按原来的文档，这会判为“情绪良好”；这里会立即转入危机流程。</li>
     <li>回到<b>医生端</b>：王女士已经排到最前面。再切到“产科”，看陈女士产后 42 天的筛查结果。</li>
-    <li><b>技能包与测试</b>：看规则文件长什么样，25 条标准答案当场核对。</li>
-    <li><b>待确认</b>：需要医院拍板的事项都列在这里。</li>
+    <li><b>规则与测试</b>：看规则文件长什么样，25 条标准答案当场核对。</li>
+    <li><b>上线前确认</b>：正式上线前需要定下来的事。</li>
   </ol></div>`;
 }
 
@@ -220,10 +220,174 @@ const CONFIRM = [
   ["范围", "七个科室先上哪几个？", "建议先做 1 到 2 个，跑通后再复制", "院方 / 业务对接人"],
 ];
 function confirm() {
-  $("#main").innerHTML = `<p class="tag amber">待确认</p><h1>需要医院拍板的事项</h1>
-  <p class="lead">以下是原型里先按我们的理解做出的决定。请逐条看：同意就打勾，不同意请写出医院的做法。反馈时只要报编号即可。</p>
+  $("#main").innerHTML = `<p class="tag amber">上线前确认</p><h1>真正上线前，需要医院定下来的事</h1>
+  <p class="lead">试用阶段可以先按默认做法跑起来；以下事项在正式上线前逐条确认即可，不影响先看效果。</p>
   <div class="card" style="margin-top:16px"><table><tr><th>#</th><th>类别</th><th>需要确认</th><th>为什么要问</th><th>建议由谁确认</th></tr>
   ${CONFIRM.map((c, i) => `<tr><td>${i + 1}</td><td class="small muted">${c[0]}</td><td>${c[1]}</td><td class="small">${c[2]}</td><td class="small muted">${c[3]}</td></tr>`).join("")}</table></div>`;
+}
+
+/* ---------- 价值页：一眼看出好处 ---------- */
+// 医院原始文档的规则，原样写成代码，用来和新系统当场对比
+function legacyPHQ(total) {
+  const b = [[0, 4, "没有抑郁症状：您的情绪状态良好，在正常范围内"], [5, 9, "轻度抑郁"], [10, 14, "中度抑郁"], [15, 19, "中重度抑郁症"], [20, 27, "重度抑郁"]];
+  return b.find(([lo, hi]) => total >= lo && total <= hi)[2];
+}
+function legacyMENQOL(s) {
+  // 原文档：1 分无症状；2-4 分轻度；5-6 分中度；7-8 分重度（整数分档）
+  if (s === 1) return "无症状";
+  if (s >= 2 && s <= 4) return "轻度";
+  if (s >= 5 && s <= 6) return "中度";
+  if (s >= 7 && s <= 8) return "重度";
+  return "无法判定（不在任何区间）";
+}
+const ma = (m) => { const a = {}; for (let i = 1; i <= 29; i++) a["m" + i] = "no"; return Object.assign(a, m); };
+const CASES = [
+  { title: "PHQ-9：前 8 题都选“完全不会”，第 9 题（伤害自己的念头）选“几乎每天”",
+    run() { const ans = { q1: 0, q2: 0, q3: 0, q4: 0, q5: 0, q6: 0, q7: 0, q8: 0, q9: 3 }; const r = score(SKILLS.phq9, ans);
+      return { old: `总分 3 → “${legacyPHQ(3)}”`, neu: `立即转危机流程，医生端置顶提醒，患者看到 12356 求助热线（系统未显示“情绪良好”）`, risk: "高" }; } },
+  { title: "MENQOL：只有潮热，困扰程度 0；其余两项都没有",
+    run() { const r = score(SKILLS.menqol, ma({ m1: 0 })); const d = r.domains[0];
+      return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → ${d.band.label}，给出对应建议`, risk: "中" }; } },
+  { title: "MENQOL：潮热、盗汗、白天出汗的困扰程度分别为 3、2、2",
+    run() { const r = score(SKILLS.menqol, ma({ m1: 3, m2: 2, m3: 2 })); const d = r.domains[0];
+      return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → ${d.band.label}，医生端给出非激素疗法参考`, risk: "中" }; } },
+];
+
+function value() {
+  const k = cohortKPI();
+  $("#main").innerHTML = `
+  <h1>把纸质量表换成一张二维码<br>医生少做三件事，科室多出一份数据</h1>
+  <p class="lead">不换现有系统，也不改门诊流程。门诊贴一张二维码就能和现有做法并行试用，随时可以停。</p>
+
+  <div class="grid g3 kpis" style="margin-top:20px">
+    <div class="card"><div class="big">0 秒</div><p>提交即出分。<br>不用手算，也不用录入。</p></div>
+    <div class="card"><div class="big">${CASES.length} 处</div><p>贵院现有量表文档里会判错或判不出的地方，系统自动挡住。<a class="link" href="#check">当场核对 ↓</a></p></div>
+    <div class="card"><div class="big">${k.patients} 人</div><p>上线半年，科室自动积累的随访档案（模拟）。<a class="link" data-go="board">看科室看板 →</a></p></div>
+  </div>
+
+  <h2 style="margin-top:30px">同一个门诊日，前后对比</h2>
+  <div class="card"><table class="cmp">
+    <tr><th></th><th>现在的常见做法 <span class="small muted">（以贵院实际为准）</span></th><th>用了之后</th></tr>
+    ${[["填表", "纸质表，在诊室或候诊区填写", "候诊时用手机扫码填写，一题一屏"],
+       ["算分", "护士或医生手算，查对照表", "提交即出分，规则固定，可以核对"],
+       ["存档", "纸张归档，或手工抄进电脑", "自动进入个人档案，按时间排好"],
+       ["医生看结果", "翻纸，和上次比较全靠记忆", "打开就是简报：这次和上次比，哪里变了"],
+       ["高风险", "看总分；自伤题可能被淹没在总分里", "单题即可触发，立刻置顶提醒"],
+       ["复测", "靠患者自己记得回来", "到期自动提醒，未完成的单独列出"],
+       ["科室统计", "年底翻纸，或者干脆不统计", "随时看看板，可导出 Excel"]]
+      .map(([a, b, c]) => `<tr><td><b>${a}</b></td><td class="muted">${b}</td><td>${c}</td></tr>`).join("")}
+  </table></div>
+
+  <h2 id="check" style="margin-top:30px">用贵院自己的量表文档，当场核对</h2>
+  <p class="muted">左边按贵院提供的 PHQ-9、MENQOL 文档中的规则原样计算，右边是本系统的结果。点“运行”即可看到。</p>
+  <div class="card"><table>
+    <tr><th>情形</th><th>按原文档</th><th>本系统</th><th></th></tr>
+    ${CASES.map((c, i) => `<tr><td>${c.title}</td><td id="old${i}" class="muted">—</td><td id="neu${i}" class="muted">—</td><td><button class="btn ghost" data-run="${i}">运行</button></td></tr>`).join("")}
+  </table>
+  <p class="small muted" style="margin-top:8px">另外，原 MENQOL 文档第 20 题、第 23 题下的程度编号写成了“10.1”和“13.1”，纸质录入时容易串题；系统按题目自动对应，不存在这个问题。</p></div>
+
+  <h2 style="margin-top:30px">算一笔时间账</h2>
+  <div class="card calc">
+    <div class="grid g3">
+      <label>每天量表份数<input type="number" id="c1" value="30"></label>
+      <label>每份手工算分、录入（分钟）<input type="number" id="c2" value="3" step="0.5"></label>
+      <label>医生每份翻看对比（分钟）<input type="number" id="c3" value="2" step="0.5"></label>
+    </div>
+    <p class="small muted">默认值是假设，请改成贵院的实际数字。按每月 22 个工作日计算；有简报后，医生每份按 0.5 分钟计。</p>
+    <div id="calcout" class="big2"></div>
+  </div>
+
+  <h2 style="margin-top:30px">试用的代价</h2>
+  <div class="grid g3">
+    <div class="card"><h3>不换系统</h3><p class="small">不接 HIS，不改现有流程。纸质表可以照用，两套并行。</p></div>
+    <div class="card"><h3>几乎不用培训</h3><p class="small">患者扫码即可填写，医生端只是一个网页，看完点一下确认。</p></div>
+    <div class="card"><h3>随时可停</h3><p class="small">数据可以放在院内服务器，随时导出 Excel。不接 AI 也能完整运行。</p></div>
+  </div>
+
+  <div class="card" style="margin-top:24px;background:var(--teal2);border-color:#cfe7e4">
+    <b>建议这样看：</b>先点上面的“运行”，再打开<a class="link" data-go="doctor">医生端</a>看看简报，最后打开<a class="link" data-go="board">科室看板</a>。如果想自己做一遍，可以进<a class="link" data-go="patient">患者端</a>。原理与规则见“原理”页，上线前需要确认的事项见“上线前确认”页。
+  </div>`;
+  document.querySelectorAll("[data-run]").forEach((b) => (b.onclick = () => {
+    const i = b.dataset.run, r = CASES[i].run();
+    $("#old" + i).innerHTML = `<span class="bad">${esc(r.old)}</span>`; $("#neu" + i).innerHTML = `<span class="ok">${esc(r.neu)}</span>`; }));
+  bindGo();
+  const calc = () => {
+    const n = +$("#c1").value || 0, a = +$("#c2").value || 0, d = +$("#c3").value || 0;
+    const perDay = n * a + n * Math.max(0, d - 0.5), month = (perDay * 22) / 60;
+    $("#calcout").innerHTML = `每天省 <b>${Math.round(perDay)}</b> 分钟，每月约 <b>${month.toFixed(0)}</b> 小时`;
+  };
+  ["#c1", "#c2", "#c3"].forEach((s) => ($(s).oninput = calc)); calc();
+}
+function bindGo() { document.querySelectorAll("[data-go]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); view = a.dataset.go; render(); window.scrollTo(0, 0); })); }
+
+/* ---------- 科室看板：模拟三个月后自动得到的数据 ---------- */
+function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+let COHORT = null;
+function cohort() {
+  if (COHORT) return COHORT;
+  const R = rng(20261105), now = Date.now(), recs = [];
+  const prev = { vasomotor: 0.75, psychosocial: 0.5, physical: 0.55, sexual: 0.45 };
+  const dom = SKILLS.menqol.scoring.domains;
+  for (let i = 0; i < 128; i++) {
+    const t0 = now - (20 + Math.floor(R() * 160)) * DAY, base = {}, sev = R() * 1.6 + 0.5;
+    for (const d of dom) for (const id of d.items) base[id] = R() < prev[d.id] ? Math.min(6, Math.floor(R() * 4 * sev)) : "no";
+    const r0 = score(SKILLS.menqol, base);
+    const rec = { t0, r0, retest: null, phq: null };
+    if (now - t0 > 90 * DAY && R() < 0.72) {
+      const f = {}; for (const [k, v] of Object.entries(base)) f[k] = v === "no" ? "no" : (R() < 0.2 ? "no" : Math.max(0, v - Math.floor(R() * 3)));
+      rec.retest = score(SKILLS.menqol, f);
+    }
+    if ((r0.domains[1].band && r0.domains[1].band.level >= 2 && R() < 0.8) || R() < 0.2) {
+      const q = {}; for (let j = 1; j <= 9; j++) q["q" + j] = Math.min(3, Math.floor(R() * 3 * sev * 0.8)); q.q9 = R() < 0.12 ? 1 : 0;
+      rec.phq = { r: score(SKILLS.phq9, q), respMin: 10 + Math.floor(R() * 70) };
+    }
+    recs.push(rec);
+  }
+  return (COHORT = recs);
+}
+function cohortKPI() {
+  const c = cohort(), due = c.filter((x) => Date.now() - x.t0 > 90 * DAY);
+  const crises = c.filter((x) => x.phq && x.phq.r.crisis);
+  return { patients: c.length, retestRate: Math.round((due.filter((x) => x.retest).length / due.length) * 100),
+    modPlus: Math.round((c.filter((x) => x.r0.domains.some((d) => d.band && d.band.level >= 2)).length / c.length) * 100),
+    phq: c.filter((x) => x.phq).length, crises: crises.length,
+    resp: crises.length ? Math.round(crises.reduce((a, x) => a + x.phq.respMin, 0) / crises.length) : 0 };
+}
+function board() {
+  const c = cohort(), k = cohortKPI(), paired = c.filter((x) => x.retest);
+  const doms = SKILLS.menqol.scoring.domains.map((d, i) => {
+    const ps = paired.filter((x) => x.r0.domains[i].score != null && x.retest.domains[i].score != null);
+    const avg = (f) => ps.reduce((a, x) => a + f(x), 0) / (ps.length || 1);
+    return { name: d.name, a: avg((x) => x.r0.domains[i].score), b: avg((x) => x.retest.domains[i].score), n: ps.length };
+  });
+  const months = {}, add = (t) => { const d = new Date(t), cur = new Date().getMonth() === d.getMonth() && Date.now() - t < 40 * DAY, key = `${d.getMonth() + 1}月${cur ? "至今" : ""}`; months[key] = (months[key] || 0) + 1; };
+  for (const x of c) { add(x.t0); if (x.phq) add(x.t0); if (x.retest) add(x.t0 + 92 * DAY); }
+  const mx = Math.max(...Object.values(months));
+  $("#main").innerHTML = `
+  <p class="tag amber">模拟数据</p>
+  <h1>更年期门诊 · 科室看板</h1>
+  <p class="lead">这是按上述流程模拟的半年数据，用来展示上线后、不额外花人力就能看到的内容。数字本身不代表贵院的实际情况。</p>
+  <div class="grid kp4" style="margin-top:18px">
+    <div class="card"><div class="big">${k.patients}</div><p class="small">建档患者</p></div>
+    <div class="card"><div class="big">${k.retestRate}%</div><p class="small">到期复测完成率</p></div>
+    <div class="card"><div class="big">${k.modPlus}%</div><p class="small">至少一个维度中度以上</p></div>
+    <div class="card"><div class="big">${k.crises} 例</div><p class="small">自伤风险提醒${k.crises ? `，平均 ${k.resp} 分钟内有人跟进` : ""}</p></div>
+  </div>
+  <div class="grid g2b" style="margin-top:16px">
+    <div class="card"><h2>复测患者：首诊与 3 个月后</h2><p class="small muted">${paired.length} 名完成复测的患者，各维度平均分（1–8，越低越好）</p>
+      ${doms.map((d) => `<div class="pair"><span>${d.name}</span><div><i style="width:${(d.a / 8) * 100}%" class="a"></i><i style="width:${(d.b / 8) * 100}%" class="b"></i></div><span class="small">${d.a.toFixed(2)} → <b>${d.b.toFixed(2)}</b></span></div>`).join("")}
+      <p class="small"><span class="sw a"></span>首诊 <span class="sw b"></span>3 个月后</p>
+      <p class="small muted">这类前后对比数据，可以直接用于科室质控、年度总结和临床研究。</p></div>
+    <div class="card"><h2>每月测评量</h2><div class="months">${Object.entries(months).sort((a, b) => parseInt(a[0]) - parseInt(b[0])).map(([m, v]) => `<div><i style="height:${(v / mx) * 140}px"></i><span>${m}</span><b>${v}</b></div>`).join("")}</div>
+      <p class="small muted">包括首次测评、复测和加做的 PHQ-9。</p>
+      <button class="btn ghost" id="csv">导出 Excel（CSV）</button></div>
+  </div>`;
+  $("#csv").onclick = () => {
+    const rows = [["编号", "首诊日期", "首诊总分", ...SKILLS.menqol.scoring.domains.map((d) => d.name), "复测总分", "PHQ-9"]];
+    c.forEach((x, i) => rows.push([i + 1, new Date(x.t0).toISOString().slice(0, 10), x.r0.total, ...x.r0.domains.map((d) => d.score ?? ""), x.retest ? x.retest.total : "", x.phq ? x.phq.r.total : ""]));
+    const blob = new Blob(["\ufeff" + rows.map((r) => r.join(",")).join("\n")], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "menqol_模拟数据.csv"; a.click();
+  };
 }
 
 /* 患者端 */
@@ -436,7 +600,7 @@ async function boot() {
   if (!db) seed();
   document.querySelectorAll("#nav button").forEach((btn) => (btn.onclick = () => { view = btn.dataset.view; render(); window.scrollTo(0, 0); }));
   $("#reset").onclick = () => { localStorage.removeItem(KEY); pf = null; sel = null; seed(); render(); };
-  const h = location.hash.slice(1); if (["concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
+  const h = location.hash.slice(1); if (["value", "board", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
   render();
 }
 boot();
