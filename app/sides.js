@@ -1,7 +1,8 @@
 /* ---------- v1.0 演示稿：两个角度，各自一屏的“之前 / 之后”对照 ----------
    病人这边：只讲病人感受到的变化。医院这边：整体收益 + 流程对照 + 各岗位的增减。
    唯一实测：填表时间（UPMC 儿科门诊，Hanmer 2021，PMC8046593，仅作参考）；其余时长均为示意（取自“算一笔时间账”的默认假设值）。
-   岗位增减条的长度只表示方向，不是测量值。 */
+   岗位增减条的长度只表示方向，不是测量值。
+   方案 A（默认）：块图；方案 B（?roles=bars）：方向条，条长按事项数分短/中/长三档。 */
 import { C, T, paperSheet, tablet, monitor, calendar } from "./visit.js";
 
 const pop = (label, html, cls = "") => `<details class="pop ${cls}"><summary>${label}</summary><div class="pop-body"><button class="pop-x" type="button" aria-label="关闭" onclick="this.closest('details').open=false">×</button>${html}</div></details>`;
@@ -92,11 +93,28 @@ export function hospitalSide(root, bindGo) {
       <span class="rl" style="--u:${100 / MAXU}%"><span class="rk m sum" style="--w:${M_}" title="各岗位多做的事加起来（示意）">多做</span></span><i class="rax"></i>
       <span class="rg" style="--u:${100 / MAXU}%"><span class="rk p sum" style="--w:${P_}" title="各岗位少做的事加起来（示意）">少做</span><span class="rk g sum" style="--w:${G_}" title="整体收益：高危不漏、一致可查、看全貌（示意）">整体</span><span class="netlbl">＝ 净收益</span></span></div>`;
   const roleText = ROLES.map((x) => `<li><b>${x.r}</b>：可能多了 ${x.more.map((c) => c[1]).join("、")}；可能少了 ${x.less.map((c) => c[1]).join("、") || "暂无明显减少"}。</li>`).join("");
+  // 方案 B（?roles=bars）：方向条。条长只分短/中/长三档，按事项数归档，只表示方向，不是测量值。
+  const BARS = new URLSearchParams(location.search).get("roles") === "bars";
+  const tier = (n) => (n >= 3 ? "long" : n === 2 ? "mid" : "short");
+  const cap = (arr) => arr.map((c) => `<span class="${c[3] ? "bn" : ""}" title="${c[1]}">${c[0]}</span>`).join("、");
+  const half = (arr, side) => arr.length
+    ? `<div class="bh ${side}"><span class="bb ${side} ${tier(arr.length)}" title="${side === "m" ? "可能多做" : "可能少做"}：${arr.map((c) => c[1]).join("、")}"></span><span class="bc">${cap(arr)}</span></div>`
+    : `<div class="bh ${side}"><span class="bc none">—</span></div>`;
+  const barRows = ROLES.map((x) => `<div class="brow"><span class="rr">${x.r}</span>${half(x.more, "m")}<i class="rax"></i>${half(x.less, "p")}</div>`).join("");
+  const barNet = `<div class="brow net"><span class="rr">整体</span>
+      <div class="bh m"><span class="bb m mid nt" title="各岗位可能多做的事（示意）">多做</span><span class="bc">各岗位多做的事</span></div><i class="rax"></i>
+      <div class="bh p"><span class="bb net" title="少做的事 + 整体收益（示意，需医院确认）">少做 + 整体收益 → 净收益</span><span class="bc">${GAINS.map((g) => g[0]).join(" · ")}</span></div></div>`;
+  const barsNote = `<li>“各岗位”方向条：红条 = 可能多做，绿条 = 可能少做。<b>条长只表示方向，不是测量值</b>，只分短 / 中 / 长三档，按事项数归档：1 项 = 短，2 项 = 中，3 项及以上 = 长；具体事项写在条下小字里。都是可能的变化，需医院确认，不代表贵院实际流程。<ul>${roleText}</ul>“整体”一行不按事项数画，只表示方向：各岗位少做的事，加上整体收益（高危不漏、一致可查、看全貌），判断为净收益——这是示意，需医院确认。</li>`;
+  const blocksNote = `<li>“各岗位”图：每一块是一件事，块数和长短只表示方向（多做 / 少做），不是测量值；都是可能的变化，需医院确认，不代表贵院实际流程。<ul>${roleText}</ul>“合计”一行：左边是各岗位多做的事加起来，右边是少做的事，再加上整体收益（高危不漏、一致可查、看全貌）。</li>`;
   const note = `<h2>说明</h2><ul>
     <li>时长都是示意（手算录入 3 分钟、翻看对比 2 分钟、有简报后 0.5 分钟，取自“算一笔时间账”的默认假设值），不是实测，请按贵院实际改。</li>
     <li>原文档 3 处问题：PHQ-9 第 9 题（自伤念头）没有单独处理，只看总分；MENQOL 维度均分会出现 1.33 这样的小数，原分级只有整数档，落在空档；第 20、23 题下的程度编号写成“10.1”“13.1”。</li>
-    <li>“各岗位”图：每一块是一件事，块数和长短只表示方向（多做 / 少做），不是测量值；都是可能的变化，需医院确认，不代表贵院实际流程。<ul>${roleText}</ul>“合计”一行：左边是各岗位多做的事加起来，右边是少做的事，再加上整体收益（高危不漏、一致可查、看全貌）。</li>
+    ${BARS ? barsNote : blocksNote}
     <li>新增的三个动作：贴码扫码、医生审阅签字、处理到期提醒。</li></ul>`;
+  const rolesBody = BARS
+    ? `<div class="bgraph">${barNet}${barRows}</div>
+      <p class="bars-lg"><span><i class="bb m sw"></i>可能多做</span><span><i class="bb p sw"></i>可能少做</span><span class="lg-new"><span class="bn">新增动作</span></span><b>条长只表示方向，不是测量值</b><span class="lg-s">（短 / 中 / 长三档，见“说明”）</span></p>`
+    : `<div class="rgraph">${netRow}${roleRows}</div>`;
   root.innerHTML = `<div class="pg cmp-pg hos">
   <div class="ph"><div><h1>医院这边：局部有增有减，整体是净收益</h1></div>
     <div class="ph-act">${pop("说明", note, "info")}<a class="link small" data-go="doctor">打开医生端 →</a><a class="link small" data-go="confirm">上线前确认 →</a></div></div>
@@ -107,9 +125,9 @@ export function hospitalSide(root, bindGo) {
   </div>
   <div class="hos2">
     <section class="card hos-flow"><div class="sec-t">流程：之前 → 之后</div><div class="cmp sm">${colHead("之前 · 纸质", "之后 · 新做法")}${FLOW.map((it, i) => row(it, i, { pic: !M })).join("")}</div></section>
-    <section class="card hos-roles"><div class="sec-t">各岗位：多做 ← │ → 少做 <span class="cmp-tag">示意</span><span class="cmp-tag amber">需医院确认</span></div>
-      <div class="rgraph">${netRow}${roleRows}</div>
-      <p class="hos-new"><span class="rk m isnew mini"></span><b>新增三个动作</b>贴码扫码 · 审阅签字 · 处理到期提醒</p>
+    <section class="card hos-roles${BARS ? " bars" : ""}"><div class="sec-t">各岗位：多做 ← │ → 少做 <span class="cmp-tag">示意</span><span class="cmp-tag amber">需医院确认</span></div>
+      ${rolesBody}
+      <p class="hos-new">${BARS ? '<span class="bn"></span>' : '<span class="rk m isnew mini"></span>'}<b>新增三个动作</b>贴码扫码 · 审阅签字 · 处理到期提醒</p>
     </section>
   </div></div>`;
   bindGo();
