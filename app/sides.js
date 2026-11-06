@@ -2,7 +2,7 @@
    病人这边：只讲病人感受到的变化。医院这边：整体收益 + 流程对照 + 各岗位的增减。
    唯一实测：填表时间（UPMC 儿科门诊，Hanmer 2021，PMC8046593，仅作参考）；其余时长均为示意（取自“算一笔时间账”的默认假设值）。
    岗位增减条的长度只表示方向，不是测量值。
-   方案 A（默认）：块图；方案 B（?roles=bars）：方向条，条长按事项数分短/中/长三档。 */
+   方案 B（默认）：方向条，条长按事项数分短/中/长三档，责任类事项（重项）按 2 项计；方案 A（?roles=blocks）：块图。 */
 import { C, T, paperSheet, tablet, monitor, calendar } from "./visit.js";
 
 const pop = (label, html, cls = "") => `<details class="pop ${cls}"><summary>${label}</summary><div class="pop-body"><button class="pop-x" type="button" aria-label="关闭" onclick="this.closest('details').open=false">×</button>${html}</div></details>`;
@@ -49,10 +49,11 @@ const FLOW = [
     b: { v: "3 处当场标出", s: "<span class=nw>第 9 题</span> · <span class=nw>1.33 空档</span> · <span class=nw>题号笔误</span>", pic: paperSheet(38, 2, 44, 66, 9, 9) + ring(64, 66 - 8) + ring(64, 34) + ring(64, 18) } },
 ];
 // 各岗位的变化（可能；需医院确认）。每块 = 一件事，块数只表示方向示意，不是测量值。
-// more：多做的事（红，左）；less：少做的事（绿，右）。[短标签, 完整说明, 宽度(块), 是否新增动作]
+// more：多做的事（红，左）；less：少做的事（绿，右）。[短标签, 完整说明, 宽度(块), 是否新增动作, 权重]
+// 权重：责任类事项记为重项（2），方向条分档时按 2 项计；其余默认 1。
 const ROLES = [
   { r: "护士", more: [["扫码", "贴码、引导病人扫码", 1, 1], ["提醒", "处理到期提醒", 1, 1]], less: [["收表", "收纸质表", 1], ["手算", "手算分、查对照表", 1], ["抄录", "抄进电脑", 1], ["登记", "手工登记复测", 1]] },
-  { r: "医生", more: [["签字", "审阅签字", 1, 1], ["担责", "承担签字责任", 1]], less: [["手算", "手算分、查表", 1], ["翻纸", "翻上次的纸对比", 1]] },
+  { r: "医生", more: [["签字", "审阅签字", 1, 1], ["担责", "承担签字责任", 1, 0, 2]], less: [["手算", "手算分、查表", 1], ["翻纸", "翻上次的纸对比", 1]] },
   { r: "科室主任", more: [["透明", "科室数据变透明，好坏都看得见", 1]], less: [["统计", "年底翻纸统计", 1]] },
   { r: "信息科", more: [["维护", "多一套系统要维护", 2]], less: [] },
 ];
@@ -92,19 +93,21 @@ export function hospitalSide(root, bindGo) {
   const netRow = `<div class="rrow net"><span class="rr">合计</span>
       <span class="rl" style="--u:${100 / MAXU}%"><span class="rk m sum" style="--w:${M_}" title="各岗位多做的事加起来（示意）">多做</span></span><i class="rax"></i>
       <span class="rg" style="--u:${100 / MAXU}%"><span class="rk p sum" style="--w:${P_}" title="各岗位少做的事加起来（示意）">少做</span><span class="rk g sum" style="--w:${G_}" title="整体收益：高危不漏、一致可查、看全貌（示意）">整体</span><span class="netlbl">＝ 净收益</span></span></div>`;
-  const roleText = ROLES.map((x) => `<li><b>${x.r}</b>：可能多了 ${x.more.map((c) => c[1]).join("、")}；可能少了 ${x.less.map((c) => c[1]).join("、") || "暂无明显减少"}。</li>`).join("");
-  // 方案 B（?roles=bars）：方向条。条长只分短/中/长三档，按事项数归档，只表示方向，不是测量值。
-  const BARS = new URLSearchParams(location.search).get("roles") === "bars";
+  const roleText = ROLES.map((x) => `<li><b>${x.r}</b>：可能多了 ${x.more.map((c) => c[1] + (c[4] > 1 ? "（重项）" : "")).join("、")}；可能少了 ${x.less.map((c) => c[1]).join("、") || "暂无明显减少"}。</li>`).join("");
+  // 方案 B（默认；?roles=blocks 看旧的方案 A 块图）：方向条。条长只分短/中/长三档，按事项数归档（重项按 2 项计），只表示方向，不是测量值。
+  const BARS = new URLSearchParams(location.search).get("roles") !== "blocks";
+  const wt = (arr) => arr.reduce((a, c) => a + (c[4] || 1), 0);
   const tier = (n) => (n >= 3 ? "long" : n === 2 ? "mid" : "short");
-  const cap = (arr) => arr.map((c) => `<span class="${c[3] ? "bn" : ""}" title="${c[1]}">${c[0]}</span>`).join("、");
+  const heavy = `<span class="bz" title="重项：责任类，分量重">重</span>`;
+  const cap = (arr) => arr.map((c) => `<span class="${[c[3] ? "bn" : "", c[4] > 1 ? "bw" : ""].join(" ").trim()}" title="${c[1]}${c[4] > 1 ? "（重项：责任类，分量重）" : ""}">${c[4] > 1 ? `<b>${c[0]}</b>${heavy}` : c[0]}</span>`).join("、");
   const half = (arr, side) => arr.length
-    ? `<div class="bh ${side}"><span class="bb ${side} ${tier(arr.length)}" title="${side === "m" ? "可能多做" : "可能少做"}：${arr.map((c) => c[1]).join("、")}"></span><span class="bc">${cap(arr)}</span></div>`
+    ? `<div class="bh ${side}"><span class="bb ${side} ${tier(wt(arr))}" title="${side === "m" ? "可能多做" : "可能少做"}：${arr.map((c) => c[1]).join("、")}"></span><span class="bc">${cap(arr)}</span></div>`
     : `<div class="bh ${side}"><span class="bc none">—</span></div>`;
   const barRows = ROLES.map((x) => `<div class="brow"><span class="rr">${x.r}</span>${half(x.more, "m")}<i class="rax"></i>${half(x.less, "p")}</div>`).join("");
   const barNet = `<div class="brow net"><span class="rr">整体</span>
       <div class="bh m"><span class="bb m mid nt" title="各岗位可能多做的事（示意）">多做</span><span class="bc">各岗位多做的事</span></div><i class="rax"></i>
       <div class="bh p"><span class="bb net" title="少做的事 + 整体收益（示意，需医院确认）">少做 + 整体收益 → 净收益</span><span class="bc">${GAINS.map((g) => g[0]).join(" · ")}</span></div></div>`;
-  const barsNote = `<li>“各岗位”方向条：红条 = 可能多做，绿条 = 可能少做。<b>条长只表示方向，不是测量值</b>，只分短 / 中 / 长三档，按事项数归档：1 项 = 短，2 项 = 中，3 项及以上 = 长；具体事项写在条下小字里。都是可能的变化，需医院确认，不代表贵院实际流程。<ul>${roleText}</ul>“整体”一行不按事项数画，只表示方向：各岗位少做的事，加上整体收益（高危不漏、一致可查、看全貌），判断为净收益——这是示意，需医院确认。</li>`;
+  const barsNote = `<li>“各岗位”方向条：红条 = 可能多做，绿条 = 可能少做。<b>条长只表示方向，不是测量值</b>，只分短 / 中 / 长三档，按事项数分档，<b>责任类事项按 2 项计</b>（标“重”，如医生的“担责”）：1 项 = 短，2 项 = 中，3 项及以上 = 长；所以医生“多做”= 签字 1 + 担责 2 = 3 → 长条，长于“少做”（手算、翻纸 2 项 → 中条）。具体事项写在条下小字里。都是可能的变化，需医院确认，不代表贵院实际流程。<ul>${roleText}</ul>“整体”一行不按事项数画，只表示方向：各岗位少做的事，加上整体收益（高危不漏、一致可查、看全貌），判断为净收益——这是示意，需医院确认。</li>`;
   const blocksNote = `<li>“各岗位”图：每一块是一件事，块数和长短只表示方向（多做 / 少做），不是测量值；都是可能的变化，需医院确认，不代表贵院实际流程。<ul>${roleText}</ul>“合计”一行：左边是各岗位多做的事加起来，右边是少做的事，再加上整体收益（高危不漏、一致可查、看全貌）。</li>`;
   const note = `<h2>说明</h2><ul>
     <li>时长都是示意（手算录入 3 分钟、翻看对比 2 分钟、有简报后 0.5 分钟，取自“算一笔时间账”的默认假设值），不是实测，请按贵院实际改。</li>
@@ -113,7 +116,7 @@ export function hospitalSide(root, bindGo) {
     <li>新增的三个动作：贴码扫码、医生审阅签字、处理到期提醒。</li></ul>`;
   const rolesBody = BARS
     ? `<div class="bgraph">${barNet}${barRows}</div>
-      <p class="bars-lg"><span><i class="bb m sw"></i>可能多做</span><span><i class="bb p sw"></i>可能少做</span><span class="lg-new"><span class="bn">新增动作</span></span><b>条长只表示方向，不是测量值</b><span class="lg-s">（短 / 中 / 长三档，见“说明”）</span></p>`
+      <p class="bars-lg"><span><i class="bb m sw"></i>可能多做</span><span><i class="bb p sw"></i>可能少做</span><span class="lg-new"><span class="bn">新增动作</span></span><span class="lg-w">${heavy} = 责任类，分量重</span><b>条长只表示方向，不是测量值</b><span class="lg-s">（短 / 中 / 长三档，见“说明”）</span></p>`
     : `<div class="rgraph">${netRow}${roleRows}</div>`;
   root.innerHTML = `<div class="pg cmp-pg hos">
   <div class="ph"><div><h1>医院这边：局部有增有减，整体是净收益</h1></div>

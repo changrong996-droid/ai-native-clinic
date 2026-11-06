@@ -396,7 +396,7 @@ pre.tree{font-size:12px;line-height:1.5;background:#f6f8f9;color:#1d2a31;padding
 }
 @media(min-width:821px) and (max-width:1400px){.brand .demo .m-hide{display:none!important}.brand .demo .m-only{display:inline!important}}
 .ck2{align-content:start}
-/* v1.0.1 方案 B（?roles=bars）：各岗位方向条。条长只分短/中/长三档，只表示方向 */
+/* v1.0.1 方案 B（v1.0.2 起为默认；?roles=blocks 看方案 A）：各岗位方向条。条长只分短/中/长三档，只表示方向 */
 .bgraph{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:space-evenly;gap:6px}
 .brow{display:grid;grid-template-columns:4.6em minmax(0,1fr) 3px minmax(0,1fr);align-items:stretch;gap:0 8px;min-height:44px}
 .brow .rr{align-self:center}
@@ -421,6 +421,10 @@ pre.tree{font-size:12px;line-height:1.5;background:#f6f8f9;color:#1d2a31;padding
 .bars-lg b{color:var(--ink);font-size:12.5px}
 .bars-lg .lg-s{margin-left:-10px}
 .bb.sw{width:18px;height:10px;border-radius:2px}
+/* v1.0.2 重项：责任类事项，分档按 2 项计；条下文字加粗 + 红底白字“重”小标 */
+.bw{display:inline-flex;align-items:center;gap:2px}.bw>b{color:#a8322e;font-weight:800}
+.bz{display:inline-block;font-size:11px;line-height:1;padding:2px 3px;border-radius:3px;background:#c9302c;color:#fff;font-weight:800;vertical-align:1px;letter-spacing:0;flex:none}
+.bars-lg .lg-w{gap:4px}
 @media (prefers-reduced-motion:no-preference){
   .bgraph .bb:not(.sw){animation:rkIn .5s ease both}
   .bgraph .bh.m .bb{transform-origin:right}.bgraph .bh.p .bb{transform-origin:left}
@@ -431,7 +435,7 @@ pre.tree{font-size:12px;line-height:1.5;background:#f6f8f9;color:#1d2a31;padding
   .brow.net{min-height:44px;padding-bottom:4px}.brow.net .bb{height:26px;font-size:11.5px}
   .bb.net{font-size:11px!important;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 50%,calc(100% - 12px) 100%,0 100%);padding-right:8px}
   .brow.net .bc{font-size:11px}
-  .bars-lg{font-size:11px;gap:2px 10px}.bars-lg b{font-size:11.5px}.bars-lg .lg-s,.bars-lg .lg-new{display:none}
+  .bars-lg{font-size:11px;gap:2px 10px}.bars-lg b{font-size:11.5px}.bars-lg .lg-s,.bars-lg .lg-new{display:none}.bz{font-size:9px;padding:1px 2px}
   .brow{min-height:30px}.brow.net{min-height:40px}
   .bgraph{gap:6px}
 }
