@@ -1,5 +1,6 @@
 import { score } from "../engine/engine.js";
 import { runGolden } from "../tests/run.js";
+import { visitView, stopVisit } from "./visit.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -9,7 +10,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 
 const SKILLS = {}, ROLES = {};
 const KEY = "anc-v2";
-let db, view = "value", sel = null, pf = null;
+let db, view = "visit", sel = null, pf = null;
 
 /* ---------- 时间线（每人一条只追加的事件流） ---------- */
 function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
@@ -111,7 +112,8 @@ async function modelBrief(pid) {
 /* ---------- 视图 ---------- */
 function render() {
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
-  ({ value, ai, board, concept, arch, patient, doctor, skills, confirm })[view]();
+  stopVisit();
+  ({ visit, value, ai, board, concept, arch, patient, doctor, skills, confirm })[view]();
 }
 
 /* ---------- 说明层：写给医生、科主任、信息科看 ---------- */
@@ -324,6 +326,7 @@ function value() {
   };
   ["#c1", "#c2", "#c3"].forEach((s) => ($(s).oninput = calc)); calc();
 }
+function visit() { visitView($("#main"), { SKILLS, score, legacyPHQ, legacyMENQOL, bindGo }); }
 function bindGo() { document.querySelectorAll("[data-go]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); view = a.dataset.go; render(); window.scrollTo(0, 0); })); }
 
 /* ---------- 科室看板：模拟三个月后自动得到的数据 ---------- */
@@ -795,7 +798,7 @@ async function boot() {
   if (!db) seed();
   document.querySelectorAll("#nav button").forEach((btn) => (btn.onclick = () => { view = btn.dataset.view; render(); window.scrollTo(0, 0); }));
   $("#reset").onclick = () => { localStorage.removeItem(KEY); pf = null; sel = null; seed(); render(); };
-  const h = location.hash.slice(1); if (["value", "ai", "board", "arch", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
+  const h = location.hash.slice(1); if (["visit", "value", "ai", "board", "arch", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
   render();
 }
 boot();
