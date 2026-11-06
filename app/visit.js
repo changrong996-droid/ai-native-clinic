@@ -178,22 +178,21 @@ export function visitView(root, D) {
   const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const totL = S.L.reduce((a, s) => a + s.clinic, 0), totR = S.R.reduce((a, s) => a + s.clinic, 0);
   const stepList = (arr) => `<ol class="vz-steps">${arr.map((s, i) => `<li data-i="${i}">${s.isNew ? '<span class="vz-new">新增</span>' : ""}${s.title}</li>`).join("")}</ol>`;
-  root.innerHTML = `<div class="vz">
-  <div class="vz-head">
+  const pop = (label, html, cls = "") => `<details class="pop ${cls}"><summary>${label}</summary><div class="pop-body"><button class="pop-x" type="button" aria-label="关闭" onclick="this.closest('details').open=false">×</button>${html}</div></details>`;
+  const srcNote = `<h2>计时说明</h2><p>只有“填表”一段用了公开实测——美国匹兹堡大学医学中心（UPMC）儿科社区门诊，纸质平均 3分24秒，平板平均 1分41秒（Hanmer 等，Applied Clinical Informatics 2021，<a class="link" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8046593" target="_blank" rel="noopener">原文</a>）；这是儿科研究，仅作参考。其余环节的时长一律是示意：手算录入 3 分钟、医生翻看对比 2 分钟、有简报后 0.5 分钟取自“算一笔时间账”的默认假设值，其他为估计，不是实测。分数由电脑按量表标准现场算出。</p>`;
+  const sideHead = (k, name) => `<div class="vz-sh"><h2>${name}</h2><div class="vz-timer"><span class="lbl">量表相关累计用时</span><span class="vz-clock" id="vzc${k}">0秒</span></div></div><div class="vz-sub"><span id="vzw${k}"></span><span id="vzs${k}"></span></div>`;
+  root.innerHTML = `<div class="vz pg">
+  <div class="ph"><div>
     <h1>看一次就诊：纸质量表 vs 新做法</h1>
-    <p class="lead">同一位病人、同一次复诊，左右同时播放。只看，不用点。</p>
-    <p class="vz-who"><span class="tag amber">演示用虚构病人</span><span class="small muted">赵女士，51 岁，更年期门诊复诊；填 MENQOL 和 PHQ-9。</span></p>
-  </div>
-  <div class="vz-timers">
-    <div class="vz-timer old"><div class="small muted">纸质 · 量表相关累计用时</div><div class="vz-clock" id="vzcL">0秒</div><div class="vz-seg" id="vzsL"></div></div>
-    <div class="vz-timer new"><div class="small muted">新做法 · 量表相关累计用时</div><div class="vz-clock" id="vzcR">0秒</div><div class="vz-seg" id="vzsR"></div></div>
-  </div>
+    <p class="lead">同一位病人、同一次复诊，左右同时播放。只看，不用点。<span class="vz-who"><span class="tag amber">演示用虚构病人</span>赵女士，51 岁，更年期门诊复诊；填 MENQOL 和 PHQ-9。</span></p>
+  </div><div class="ph-act">${pop("计时说明", srcNote)}<span id="vzallslot"></span></div></div>
   <div class="vz-note" id="vznote" aria-live="polite"></div>
   <div class="vz-split" id="vzsplit">
-    <section class="vz-side old"><h2>现在：纸质量表</h2><div class="vz-stage"><div class="vz-when" id="vzwL"></div><svg viewBox="0 0 360 180" id="vzgL" role="img" aria-label="纸质量表流程动画"></svg><p class="vz-cap" id="vzpL"></p></div>${stepList(S.L)}</section>
-    <section class="vz-side new"><h2>新做法</h2><div class="vz-stage"><div class="vz-when" id="vzwR"></div><svg viewBox="0 0 360 180" id="vzgR" role="img" aria-label="新做法流程动画"></svg><p class="vz-cap" id="vzpR"></p></div>${stepList(S.R)}</section>
+    <section class="vz-side old">${sideHead("L", "现在：纸质量表")}<div class="vz-stage"><svg viewBox="0 0 360 180" id="vzgL" role="img" aria-label="纸质量表流程动画"></svg></div><p class="vz-cap" id="vzpL"></p>${stepList(S.L)}</section>
+    <section class="vz-side new">${sideHead("R", "新做法")}<div class="vz-stage"><svg viewBox="0 0 360 180" id="vzgR" role="img" aria-label="新做法流程动画"></svg></div><p class="vz-cap" id="vzpR"></p>${stepList(S.R)}</section>
     <div class="vz-end" id="vzend" hidden>
       <h2>看完了：这是演示样品，不是成品</h2>
+      <div class="vz-tot"><span class="muted">纸质合计（示意） <b style="color:#4d5c66">${mm(totL)}</b></span><span class="muted">新做法合计（示意，含新增动作） <b style="color:var(--teal)">${mm(totR)}</b></span></div>
       <div class="vz-endgrid">
         <div class="card"><h3>医生少做的三件事</h3><ul><li>免手算分</li><li>免翻纸对比</li><li>免手工登记复测</li></ul></div>
         <div class="card vz-newcard"><h3>新增的三个动作</h3><ul><li>贴码扫码</li><li>医生审阅签字</li><li>处理到期提醒</li></ul></div>
@@ -210,8 +209,6 @@ export function visitView(root, D) {
     <button class="btn ghost" id="vzre">重播</button>
     <div class="seg" id="vzspd">${[0.5, 1, 2].map((s) => `<button data-s="${s}" class="${s === 1 ? "on" : ""}">${s}×</button>`).join("")}</div>
   </div>
-  <p class="small muted vz-src">计时说明：只有“填表”一段用了公开实测——美国匹兹堡大学医学中心（UPMC）儿科社区门诊，纸质平均 3分24秒，平板平均 1分41秒（Hanmer 等，Applied Clinical Informatics 2021，<a class="link" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8046593" target="_blank" rel="noopener">原文</a>）；这是儿科研究，仅作参考。其余环节的时长一律是示意：手算录入 3 分钟、医生翻看对比 2 分钟、有简报后 0.5 分钟取自“算一笔时间账”的默认假设值，其他为估计，不是实测。分数由电脑按量表标准现场算出。</p>
-  <div id="vzstatic"></div>
 </div>`;
 
   const $ = (s) => root.querySelector(s);
@@ -222,7 +219,7 @@ export function visitView(root, D) {
     const arr = S[k], sc = sceneAt(arr, t), p = clamp((t - sc.t0) / (sc.t1 - sc.t0));
     $("#vzg" + k).innerHTML = defs + sc.draw(p, t);
     $("#vzp" + k).textContent = typeof sc.cap === "function" ? sc.cap(p, t) : sc.cap;
-    $("#vzw" + k).innerHTML = `<span class="tag gray">${sc.when}</span>${sc.isNew ? `<span class="tag amber">新增动作 ${sc.isNew}/3</span>` : ""}`;
+    $("#vzw" + k).innerHTML = `<span class="tag gray">${sc.when}</span>${sc.isNew ? `<span class="tag amber">新增 ${sc.isNew}/3</span>` : ""}`;
     root.querySelectorAll(`.vz-side.${k === "L" ? "old" : "new"} .vz-steps li`).forEach((li, i) => { li.className = t >= arr[i].t1 ? "done" : arr[i] === sc ? "cur" : ""; });
     const c = clinicAt(arr, t);
     $("#vzc" + k).textContent = mm(c.s);
@@ -255,16 +252,17 @@ export function visitView(root, D) {
     draw();
     if (P.playing) P.raf = requestAnimationFrame(tick);
   }
-  function setMode(m) { P.mode = m; root.querySelector(".vz").classList.toggle("static", m === "static"); if (m === "static") renderStatic(); else $("#vzstatic").innerHTML = ""; }
+  function setMode(m) { P.mode = m; }
   function play() { if (P.mode === "static") setMode("anim"); if (P.t >= TOTAL) seek(0); P.playing = true; P.last = performance.now(); cancelAnimationFrame(P.raf); P.raf = requestAnimationFrame(tick); draw(); }
   function pause() { P.playing = false; cancelAnimationFrame(P.raf); draw(); }
   function seek(t) { P.t = clamp(t, 0, TOTAL); P.hold = 0; P.held = new Set(PAUSES.filter((p) => p.t < P.t).map((p) => p.t)); draw(); }
   function renderStatic() {
-    const card = (sc, k) => `<div class="vz-scard ${sc.isNew ? "isnew" : ""}"><div><span class="tag gray">${sc.when}</span>${sc.isNew ? `<span class="tag amber">新增动作 ${sc.isNew}/3</span>` : ""}${sc.real ? `<span class="tag">实测参考</span>` : sc.clinic ? `<span class="tag gray">示意 ${mm(sc.clinic)}</span>` : ""}</div><b>${sc.title}</b><svg viewBox="0 0 360 180">${defs}${sc.draw(1, sc.t1 - 0.01)}</svg><p class="small">${typeof sc.cap === "function" ? sc.cap(1, sc.t1 - 0.01) : sc.cap}</p></div>`;
-    $("#vzstatic").innerHTML = `<h2>分步看（已按系统设置关闭自动播放，可点上方“播放”）</h2>
-      <div class="vz-sgrid"><div><h3>现在：纸质量表</h3>${S.L.map((s) => card(s, "L")).join("")}</div><div><h3>新做法</h3>${S.R.map((s) => card(s, "R")).join("")}</div></div>
-      <h3>四个停顿点</h3>${PAUSES.map((p) => `<div class="vz-note on static"><b>${p.title}</b><br>${p.body(d)}</div>`).join("")}`;
+    const card = (sc) => `<div class="vz-scard ${sc.isNew ? "isnew" : ""}"><div><span class="tag gray">${sc.when}</span>${sc.isNew ? `<span class="tag amber">新增动作 ${sc.isNew}/3</span>` : ""}${sc.real ? `<span class="tag">实测参考</span>` : sc.clinic ? `<span class="tag gray">示意 ${mm(sc.clinic)}</span>` : ""}</div><b>${sc.title}</b><svg viewBox="0 0 360 180">${defs}${sc.draw(1, sc.t1 - 0.01)}</svg><p class="small">${typeof sc.cap === "function" ? sc.cap(1, sc.t1 - 0.01) : sc.cap}</p></div>`;
+    return `<h2>全部画面一览</h2>
+      <div class="vz-sgrid"><div><h3>现在：纸质量表</h3>${S.L.map(card).join("")}</div><div><h3>新做法</h3>${S.R.map(card).join("")}</div></div>
+      <h3>四个停顿点</h3>${PAUSES.map((p) => `<div class="vz-note on" style="margin:6px 0"><b>${p.title}</b><br>${p.body(d)}</div>`).join("")}`;
   }
+  $("#vzallslot").outerHTML = pop("全部画面一览", renderStatic());
 
   $("#vzplay").onclick = () => (P.playing ? pause() : play());
   $("#vzre").onclick = () => { seek(0); play(); };
@@ -275,5 +273,5 @@ export function visitView(root, D) {
   window.__vz = { seek: (t) => { pause(); seek(t); }, play, pause, state: () => ({ t: P.t, playing: P.playing, mode: P.mode, speed: P.speed }), pauses: PAUSES.map((p) => p.t), END_T, TOTAL };
 
   seek(0);
-  if (reduce) setMode("static"); else play();
+  if (reduce) { $("#vznote").innerHTML = "已按系统设置关闭自动播放：可点“播放”，或拖动时间轴。"; $("#vznote").className = "vz-note soft"; } else play();
 }
