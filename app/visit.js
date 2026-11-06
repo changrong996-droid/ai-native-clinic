@@ -74,12 +74,15 @@ function buildData(D) {
   return { prevM, curM, phq, phqAns, vaso, vasoPrev,
     oldPHQ: D.legacyPHQ(phq.total), oldVaso: D.legacyMENQOL(vaso.score),
     q9opt: D.SKILLS.phq9.items.find((i) => i.id === "q9")?.options?.find((o) => o.value === 1)?.label || "好几天",
-    crisisDoc: phq.crises[0]?.doctor || "" };
+    crisisDoc: phq.crises[0]?.doctor || "",
+    gapIds: curM.domains.filter((x) => x.score != null && /无法判定/.test(D.legacyMENQOL(x.score))).map((x) => x.id) };
 }
 
 /* ---------- 场景表 ---------- */
 // clinic：这一段在门诊里的时长（秒）；real：是否为公开实测；when：发生在什么时候
 function buildScenes(d) {
+  const gap = (x) => x.score != null && d.gapIds.includes(x.id);
+  const gapList = () => d.curM.domains.filter(gap).map((x) => `${x.name.replace("症状", "").replace("状态", "")} ${x.score}`).join("、");
   const sumStr = Object.values(d.phqAns).join("+");
   const L = [
     { t0: 0, t1: 8, clinic: 30, when: "候诊", title: "发纸质表", cap: "挂号后，护士发纸质表和笔：MENQOL 29 题 + PHQ-9 9 题。",
@@ -109,7 +112,7 @@ function buildScenes(d) {
     { t0: 98, t1: 118, clinic: 0, tag: "不计时", when: "3 个月后", title: "3 个月后", cap: "没有到期提醒：病人记得就回来，忘了就断了。科室要统计，只能年底翻一摞纸。",
       draw: (p) => desk() + calendar(30, 30, "3 个月后") + person(170, 150, "pat") + `<g opacity="${clamp(p * 4)}">${T(196, 92, "？", { size: 30, fill: C.mute, bold: true })}</g>` + `<g opacity="${clamp(p * 2 - 0.6)}">${[0, 1, 2, 3, 4, 5].map((i) => `<rect x="${250 + (i % 2) * 3}" y="${150 - i * 9}" width="70" height="8" fill="${C.paper}" stroke="#c8c1a8"/>`).join("")}${T(285, 82, "年底翻纸统计", { size: 11.5, anchor: "middle", fill: C.mute })}</g>` },
   ];
-  const brief = `血管舒缩 ${d.vasoPrev.score} → ${d.vaso.score}，好转`;
+  const brief = `血管舒缩 ${d.vasoPrev.score} → ${d.vaso.score}（下降）`;
   const R = [
     { t0: 0, t1: 6, clinic: 20, when: "候诊", title: "贴码扫码", isNew: 1, cap: "护士把二维码贴在桌上，病人扫码打开问卷（也可以用科室平板）。",
       draw: (p) => desk() + badgeNew(1) + person(70, 150, "nurse") + qr(130, 110, 50) + person(280, 150, "pat") + tablet(222, 96, 44, 62, "") + `<path d="M222 ${110 + Math.sin(p * 12) * 14} L184 ${135}" stroke="${C.teal}" stroke-width="2" stroke-dasharray="4 3" opacity="${clamp(p * 3)}"/>` },
@@ -124,28 +127,61 @@ function buildScenes(d) {
           `<rect x="6" y="44" width="178" height="22" rx="4" fill="#fff" stroke="${C.line}"/>${T(14, 59, `PHQ-9 ${d.phq.total} 分 · ${d.phq.band.label}`, { size: 11 })}` +
           `<rect x="6" y="72" width="178" height="22" rx="4" fill="#fff" stroke="${C.line}"/>${T(14, 87, `MENQOL 已算好 · 血管舒缩 ${d.vaso.score}`, { size: 11 })}`) },
     { t0: 28, t1: 66, clinic: 0, wait: true, when: "候诊", title: "候诊（已完成，等叫号）",
-      cap: (p, t) => (t >= 57 && t < 66) ? `MENQOL 血管舒缩 ${d.vaso.score} 分：按草案区间暂列“${d.vaso.band.label}”，并标“原标准此处有空档，需主任审定”。` : "病人候诊。医生网页上，高危提醒一直置顶，MENQOL 各维度已算好。",
+      cap: (p, t) => (t >= 57 && t < 66) ? `落在原标准空档的维度（${gapList()}）照样算出，按草案区间暂列，并标“空档 · 需主任审定”。` : "病人候诊。医生网页上，高危提醒一直置顶，MENQOL 各维度已算好。",
       draw: (p, t) => { const hi = t >= 57 && t < 66; return desk() + person(48, 150, "pat", 0.9) + T(48, 172 - 6, "", {}) +
-        monitor(96, 6, 250, 146, `<rect x="6" y="6" width="228" height="26" rx="4" fill="${C.red2}" stroke="${C.red}"/>${T(14, 24, "⚠ 高危提醒置顶 · 需当日人工评估", { size: 11.5, fill: C.red, bold: true })}` +
+        monitor(96, 6, 250, 146, `<rect x="6" y="6" width="228" height="26" rx="4" fill="${C.red2}" stroke="${C.red}"/>${T(14, 24, "⚠ 高危提醒置顶 · 需人工评估（时限由医院定）", { size: 11, fill: C.red, bold: true })}` +
           T(8, 50, "MENQOL 各维度", { size: 11, fill: C.mute }) +
-          d.curM.domains.map((x, i) => { const flag = i === 0; const y = 58 + i * 18; return `<rect x="6" y="${y}" width="228" height="16" rx="3" fill="${flag && hi ? C.amber2 : "#fff"}" stroke="${flag && hi ? "#e6c27a" : C.line}"/>${T(12, y + 12, `${x.name.replace("症状", "").replace("状态", "")} ${x.score ?? "—"}`, { size: 10.5 })}${flag ? T(228, y + 12, hi ? "原标准此处有空档，需主任审定" : `${x.band.label}`, { size: 10, anchor: "end", fill: hi ? C.amber : C.mute, bold: hi }) : T(228, y + 12, x.band ? x.band.label : "", { size: 10, anchor: "end", fill: C.mute })}`; }).join("")); } },
-    { t0: 66, t1: 78, clinic: 30, when: "诊间", title: "诊间：看简报", short: "看简报", cap: "医生打开就是简报：这次和上次比，哪里变了。外部大模型默认关闭，简报不靠它。",
+          d.curM.domains.map((x, i) => { const flag = gap(x); const y = 58 + i * 18; return `<rect x="6" y="${y}" width="228" height="16" rx="3" fill="${flag && hi ? C.amber2 : "#fff"}" stroke="${flag && hi ? "#e6c27a" : C.line}"/>${T(12, y + 12, `${x.name.replace("症状", "").replace("状态", "")} ${x.score ?? "—"}`, { size: 10.5 })}${flag ? T(228, y + 12, hi ? `${x.band.label} · 原标准空档，需主任审定` : `${x.band.label} · 空档`, { size: 10, anchor: "end", fill: C.amber, bold: hi }) : T(228, y + 12, x.band ? x.band.label : "", { size: 10, anchor: "end", fill: C.mute })}`; }).join("")); } },
+    { t0: 66, t1: 78, clinic: 30, when: "诊间", title: "诊间：看简报", short: "看简报", cap: "医生打开就是简报：这次和上次比，数字怎么变的。数字由电脑按量表标准算；怎么判断由医生定。",
       draw: (p) => desk() + person(40, 150, "doc") + person(320, 150, "pat", 0.9) +
         monitor(70, 6, 210, 112, T(8, 18, "诊前简报 · 自动生成", { size: 11, fill: C.teal }) + T(8, 38, brief, { size: 11.5 }) + T(8, 56, `PHQ-9 ${d.phq.total} 分，第 9 题阳性`, { size: 11.5, fill: C.red }) +
           `<rect x="6" y="64" width="188" height="34" rx="5" fill="#eef1f3" stroke="#c9d1d6" stroke-dasharray="4 3"/>${T(14, 79, "外部大模型 · 只作参考", { size: 10.5, fill: "#9aa6ae" })}${T(14, 93, "（默认关闭）", { size: 10.5, fill: "#9aa6ae" })}<rect x="150" y="74" width="30" height="14" rx="7" fill="#c9d1d6"/><circle cx="158" cy="81" r="5" fill="#fff"/>`) +
-        bubble(88, 142, 200, "潮热比上次好多了。", "doc", p - 0.2) },
+        bubble(88, 142, 220, "医生：潮热比上次轻了吗？", "doc", p - 0.2) },
     { t0: 78, t1: 86, clinic: 30, when: "诊间", title: "医生审阅签字", isNew: 2, cap: "医生看完，点“审阅并签字”，结果才算数。",
       draw: (p) => desk() + badgeNew(2) + person(50, 150, "doc") + monitor(90, 30, 200, 110, T(10, 22, "赵女士 · 本次量表", { size: 11.5, bold: true }) +
         `<rect x="40" y="44" width="110" height="30" rx="8" fill="${p > 0.55 ? "#fff" : C.teal}" stroke="${C.teal}"/>${T(95, 64, p > 0.55 ? "✓ 已签字" : "审阅并签字", { size: 12, anchor: "middle", fill: p > 0.55 ? C.teal : "#fff", bold: true })}`) +
         `<path d="M${260 - ease(p * 1.8) * 70} ${150 - ease(p * 1.8) * 50} l0 16 l5 -5 l7 9 l3 -2 l-7 -9 l7 0 z" fill="#fff" stroke="${C.ink}"/>` },
-    { t0: 86, t1: 106, clinic: 60, when: "3 个月后", title: "处理到期提醒", isNew: 3, cap: "3 个月后，到期复测自动列出；护士处理到期提醒（怎么联系病人由医院定）。",
-      draw: (p) => desk() + badgeNew(3) + calendar(14, 40, "3 个月后") + person(320, 150, "nurse", 0.9) + monitor(100, 34, 196, 110, T(8, 18, "到期提醒", { size: 11.5, bold: true }) +
+    { t0: 86, t1: 106, clinic: 60, when: "3 个月后", title: "处理到期提醒", isNew: 3, cap: "3 个月后，到期复测自动列出，有人处理到期提醒（由谁处理、怎么联系病人，由医院定）。",
+      draw: (p) => desk() + badgeNew(3) + calendar(14, 40, "3 个月后") + monitor(100, 34, 196, 110, T(8, 18, "到期提醒", { size: 11.5, bold: true }) +
         `<rect x="6" y="28" width="174" height="26" rx="4" fill="${p > 0.6 ? "#f3f6f7" : C.amber2}" stroke="${p > 0.6 ? C.line : "#e6c27a"}"/>${T(12, 45, "赵女士 · 复测到期", { size: 11 })}${T(176, 45, p > 0.6 ? "已处理" : "待处理", { size: 10.5, anchor: "end", fill: p > 0.6 ? C.teal : C.amber, bold: true })}` +
         `<rect x="6" y="60" width="174" height="22" rx="4" fill="#fff" stroke="${C.line}"/>${T(12, 75, "未完成的单独列出", { size: 10.5, fill: C.mute })}`) },
     { t0: 106, t1: 118, clinic: 0, tag: "随时可看 · 不计时", when: "随时", title: "科室统计 · 导出 Excel", cap: "科室统计随时看，可导出 Excel，不用年底翻纸。",
       draw: (p) => desk() + monitor(30, 20, 180, 120, [30, 52, 40, 64, 58, 72].map((h, i) => `<rect x="${14 + i * 26}" y="${100 - h * clamp(p * 2)}" width="18" height="${h * clamp(p * 2)}" rx="2" fill="${C.teal}"/>`).join("")) +
         `<g opacity="${clamp(p * 3 - 1)}" transform="translate(236,52)"><rect width="84" height="96" rx="6" fill="#fff" stroke="#2e7d4f" stroke-width="2"/><rect width="84" height="20" rx="6" fill="#2e7d4f"/>${T(42, 15, "Excel", { size: 12, anchor: "middle", fill: "#fff", bold: true })}${[0, 1, 2, 3].map((r) => `<line x1="6" x2="78" y1="${36 + r * 16}" y2="${36 + r * 16}" stroke="#cfe3d9"/>`).join("")}<line x1="34" x2="34" y1="24" y2="90" stroke="#cfe3d9"/></g>` },
   ];
+  /* ---------- 手机竖版画面（viewBox 150×160）：少字、大图形，关键词 ≥ 12（渲染约 13px） ---------- */
+  const K = (y, txt, o = {}) => T(75, y, txt, Object.assign({ size: 14, anchor: "middle", bold: true }, o));
+  const mNew = (n) => `<g transform="translate(37,4)"><rect width="76" height="20" rx="10" fill="${C.amber2}" stroke="#e6c27a"/>${T(38, 14.5, `新增 ${n}/3`, { size: 12, fill: C.amber, anchor: "middle", bold: true })}</g>`;
+  const mSheet = (x, y, w, h, rows, filled, opt) => paperSheet(x, y, w, h, rows, filled, opt);
+  const mBox = (y, txt, col, bg, size = 13) => `<rect x="8" y="${y}" width="134" height="26" rx="6" fill="${bg}" stroke="${col}"/>${T(75, y + 18, txt, { size, anchor: "middle", bold: true, fill: col })}`;
+  const mL = [
+    (p) => mSheet(45, 14 + Math.sin(Math.PI * p) * -6, 60, 84, 7, 0) + K(126, "发纸质表") + K(146, "38 题 + 笔", { size: 12, bold: false, fill: C.mute }),
+    (p) => { const n = Math.max(1, Math.floor(p * 38)); return mSheet(40, 8, 70, 92, 8, Math.min(8, n % 9)) + `<path d="M${52 + (n % 4) * 12} ${30 + (n % 8) * 9} l12 -22" stroke="#34495e" stroke-width="3" stroke-linecap="round"/>` + K(124, `第 ${n} / 38 题`) + K(146, n >= 37 ? `第 9 题：${d.q9opt}` : "用笔一题一题填", { size: 12, bold: n >= 37, fill: n >= 37 ? C.red : C.mute }); },
+    (p) => `<g transform="translate(${70 - ease(p) * 30},${10 + ease(p) * 20})">${mSheet(0, 0, 44, 58, 5, 5)}</g><rect x="60" y="62" width="70" height="40" rx="5" fill="#e9dfc7" stroke="#c8b98f"/>` + K(124, "护士收表") + K(146, "夹进病历，等算分", { size: 12, bold: false, fill: C.mute }),
+    (p) => {
+      const calcM = `<g transform="translate(10,14)"><rect width="40" height="56" rx="5" fill="#3c4a54"/><rect x="5" y="5" width="30" height="12" fill="#cfe3d9"/>${[0, 1, 2].map((r) => [0, 1, 2].map((c) => `<rect x="${5 + c * 11}" y="${22 + r * 11}" width="8" height="8" rx="1.5" fill="#9fb0ba"/>`).join("")).join("")}</g>`;
+      if (p < 0.42) return calcM + T(60, 34, "PHQ-9", { size: 12, fill: C.mute }) + T(60, 58, `= ${d.phq.total} 分`, { size: 16, bold: true }) + K(110, "手算 · 查表") + K(134, `→“${d.oldPHQ}”`, { size: 12, bold: false });
+      if (p < 0.67) return mSheet(40, 6, 70, 80, 9, 9, { hi: 8 }) + K(112, "第 9 题 = 1", { size: 16, fill: C.red }) + K(136, "这时才发现", { size: 13, fill: C.red });
+      return K(34, `(2+1+1)÷3`, { size: 13, bold: false }) + K(58, `= ${d.vaso.score}`, { size: 18 }) + ["1", "2–4", "5–6", "7–8"].map((b, i) => `<rect x="${11 + i * 32}" y="72" width="30" height="22" fill="#fff" stroke="${C.line}"/>${T(26 + i * 32, 88, b, { size: 12, anchor: "middle" })}`).join("") + (p > 0.78 ? `<path d="M42 110 l0 -12" stroke="${C.red}" stroke-width="2"/>` + K(132, "？查不到这一档", { size: 13, fill: C.red }) : "");
+    },
+    (p) => mSheet(22, 10, 48, 64, 6, 6) + mSheet(80 + Math.sin(p * 20) * 3, 14, 48, 64, 6, 6) + K(104, "翻纸对比") + K(128, "“上次几分来着？”", { size: 12, bold: false, fill: C.mute }),
+    (p) => `<g transform="translate(25,10)"><rect width="100" height="74" rx="5" fill="${C.paper}" stroke="#c8c1a8"/>${[0, 1, 2].map((i) => `<line x1="8" x2="92" y1="${22 + i * 18}" y2="${22 + i * 18}" stroke="#e3dcc6"/>`).join("")}<path d="M${12 + p * 70} 40 l10 -26" stroke="#34495e" stroke-width="3" stroke-linecap="round"/></g>` + K(112, "手工登记") + K(136, "复测靠病人记得", { size: 12, bold: false, fill: C.mute }),
+    (p) => `<g transform="translate(20,10)">${calendar(0, 0, "3 个月后")}</g>` + `<g opacity="${clamp(p * 4)}">${T(116, 56, "？", { size: 34, fill: C.mute, bold: true, anchor: "middle" })}</g>` + K(112, "没有提醒") + K(136, "统计要年底翻纸", { size: 12, bold: false, fill: C.mute }),
+  ];
+  const mR = [
+    (p) => mNew(1) + qr(20, 34, 52) + tablet(90, 30, 42, 60, "") + `<path d="M90 ${50 + Math.sin(p * 12) * 10} L74 60" stroke="${C.teal}" stroke-width="2" stroke-dasharray="4 3"/>` + K(118, "贴码扫码") + K(140, "护士新增的动作", { size: 12, bold: false, fill: C.amber }),
+    (p) => { const n = Math.max(1, Math.ceil(p * 38)), q9 = n >= 37; return tablet(30, 4, 90, 100, `<rect x="10" y="10" width="${70 * p}" height="4" rx="2" fill="${C.teal}"/>` + [0, 1, 2].map((i) => { const on = q9 ? i === 1 : i === n % 3; return `<rect x="10" y="${22 + i * 20}" width="58" height="15" rx="4" fill="${on ? C.teal2 : "#fff"}" stroke="${on ? C.teal : C.line}"/>`; }).join("")) + K(126, q9 ? "第 9 题" : `第 ${n} / 38 题`) + K(148, "一屏一题，点选", { size: 12, bold: false, fill: C.mute }); },
+    (p) => `<g opacity="${clamp(p * 4 - 0.2)}">${mBox(8, "⚠ 高危提醒", C.red, C.red2, 15)}</g>` + T(75, 50, "第 9 题 1 分", { size: 13, anchor: "middle", fill: C.red, bold: true }) + mBox(62, `PHQ-9 ${d.phq.total} 分`, C.ink, "#fff") + mBox(94, `MENQOL 已算好`, C.ink, "#fff") + K(146, "提交即出分", { fill: C.teal }),
+    (p, t) => { const hi = t >= 57 && t < 66; return mBox(8, "⚠ 高危置顶", C.red, C.red2, 14) + (hi
+        ? `<rect x="8" y="44" width="134" height="56" rx="6" fill="${C.amber2}" stroke="#e6c27a"/>` + T(75, 66, d.curM.domains.filter(gap).map((x) => x.score).join(" · "), { size: 15, anchor: "middle", bold: true }) + T(75, 88, "空档 · 待主任定", { size: 13, anchor: "middle", fill: C.amber, bold: true })
+        : mBox(46, "MENQOL 已算好", C.ink, "#fff") + mBox(78, "等叫号", C.teal, C.teal2)) + K(140, hi ? "照样算出，标出空档" : "已完成，安心等", { size: 12, bold: false, fill: C.mute }); },
+    (p) => `<rect x="8" y="6" width="134" height="64" rx="6" fill="#f7fafb" stroke="${C.line}"/>` + T(16, 24, "诊前简报", { size: 12, fill: C.teal, bold: true }) + T(16, 44, `${d.vasoPrev.score} → ${d.vaso.score}`, { size: 15, bold: true }) + T(16, 62, "（下降）", { size: 12, fill: C.mute }) +
+      `<rect x="8" y="78" width="134" height="26" rx="6" fill="#eef1f3" stroke="#c9d1d6" stroke-dasharray="4 3"/>${T(16, 95, "外部大模型 · 关", { size: 12, fill: "#8b98a1" })}` + K(132, "看简报"),
+    (p) => mNew(2) + `<rect x="20" y="40" width="110" height="38" rx="10" fill="${p > 0.55 ? "#fff" : C.teal}" stroke="${C.teal}" stroke-width="2"/>` + T(75, 65, p > 0.55 ? "✓ 已签字" : "审阅并签字", { size: 15, anchor: "middle", fill: p > 0.55 ? C.teal : "#fff", bold: true }) + K(112, "医生签字") + K(134, "签了才算数", { size: 12, bold: false, fill: C.amber }),
+    (p) => mNew(3) + `<g transform="translate(14,30) scale(.9)">${calendar(0, 0, "3 个月后")}</g>` + `<g transform="translate(96,36)"><path d="M0 22 q0 -22 15 -22 q15 0 15 22 l5 6 h-40 z" fill="${C.amber2}" stroke="${C.amber}" stroke-width="2"/><circle cx="15" cy="33" r="4" fill="${C.amber}"/></g>` + K(116, "到期提醒") + K(138, p > 0.6 ? "已处理" : "待处理", { size: 13, fill: p > 0.6 ? C.teal : C.amber }),
+    (p) => [30, 52, 40, 64].map((h, i) => `<rect x="${14 + i * 18}" y="${92 - h * clamp(p * 2)}" width="13" height="${h * clamp(p * 2)}" rx="2" fill="${C.teal}"/>`).join("") + `<g opacity="${clamp(p * 3 - 0.5)}" transform="translate(92,26)"><rect width="46" height="62" rx="5" fill="#fff" stroke="#2e7d4f" stroke-width="2"/><rect width="46" height="16" rx="5" fill="#2e7d4f"/>${T(23, 12.5, "Excel", { size: 11, anchor: "middle", fill: "#fff", bold: true })}</g>` + K(122, "随时导出") + K(144, "不用年底翻纸", { size: 12, bold: false, fill: C.mute }),
+  ];
+  L.forEach((s, i) => (s.m = mL[i])); R.forEach((s, i) => (s.m = mR[i]));
   return { L, R };
 }
 
@@ -153,9 +189,9 @@ const PAUSES = [
   { t: 20, side: "both", title: "停顿 · 第 9 题选了非零（自伤念头）",
     body: (d) => `新做法：病人一提交，医生网页立刻置顶高危提醒。纸质：表还在病人手里，要等收表、翻到第 9 题才会发现。<b>提醒目前只出现在医生网页上，非门诊时段谁接手由医院定。</b>` },
   { t: 60, side: "both", title: "停顿 · MENQOL 某维度均分 1.33",
-    body: (d) => `血管舒缩维度 (2+1+1)÷3 = ${d.vaso.score}。原文档分级只有整数档（1 / 2–4 / 5–6 / 7–8），${d.vaso.score} 落在空档，原件查不到。新做法照样算出分数，并标<b>“原标准此处有空档，需主任审定”</b>。` },
-  { t: 72, side: "R", title: "停顿 · 外部大模型默认关闭",
-    body: () => `简报里的数字都由电脑按量表标准算出。右边灰掉的<b>“外部大模型 · 只作参考（默认关闭）”</b>：开启前须医院同意；不开也能完整运行。` },
+    body: (d) => `血管舒缩维度 (2+1+1)÷3 = ${d.vaso.score}。原文档分级只有整数档（1 / 2–4 / 5–6 / 7–8），${d.vaso.score} 落在空档，原件查不到。新做法照样算出，所有落在空档的维度都标<b>“空档 · 需主任审定”</b>；<b>分级由主任上线前定一次，之后自动归档</b>，不用每个病人都审。` },
+  { t: 72, side: "R", title: "停顿 · AI 管什么",
+    body: () => `<b>AI 只负责听懂、整理、提问；算分、分级、高危提醒由电脑按量表标准算；结论由医生审阅签字。</b>右边灰掉的“外部大模型 · 只作参考（默认关闭）”只用来整理文字，开启前须医院同意；不开也能完整运行。` },
   { t: 100, side: "R", title: "停顿 · 新做法新增的三个动作",
     body: () => `<b>贴码扫码 ✓　医生审阅签字 ✓　处理到期提醒 ✓</b><br>这三件是护士和医生多出来的工作，时长已经算进右边的计时器（示意）。` },
 ];
@@ -177,6 +213,7 @@ export function visitView(root, D) {
   const d = buildData(D), S = buildScenes(d);
   const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const totL = S.L.reduce((a, s) => a + s.clinic, 0), totR = S.R.reduce((a, s) => a + s.clinic, 0);
+  const fillL = S.L.filter((s) => s.real).reduce((a, s) => a + s.clinic, 0), fillR = S.R.filter((s) => s.real).reduce((a, s) => a + s.clinic, 0);
   const stepList = (arr) => `<ol class="vz-steps">${arr.map((s, i) => `<li data-i="${i}">${s.isNew ? '<span class="vz-new">新增</span>' : ""}${s.title}</li>`).join("")}</ol>`;
   const pop = (label, html, cls = "") => `<details class="pop ${cls}"><summary>${label}</summary><div class="pop-body"><button class="pop-x" type="button" aria-label="关闭" onclick="this.closest('details').open=false">×</button>${html}</div></details>`;
   const srcNote = `<h2>计时说明</h2><p>只有“填表”一段用了公开实测——美国匹兹堡大学医学中心（UPMC）儿科社区门诊，纸质平均 3分24秒，平板平均 1分41秒（Hanmer 等，Applied Clinical Informatics 2021，<a class="link" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8046593" target="_blank" rel="noopener">原文</a>）；这是儿科研究，仅作参考。其余环节的时长一律是示意：手算录入 3 分钟、医生翻看对比 2 分钟、有简报后 0.5 分钟取自“算一笔时间账”的默认假设值，其他为估计，不是实测。分数由电脑按量表标准现场算出。</p>`;
@@ -192,13 +229,15 @@ export function visitView(root, D) {
     <section class="vz-side new">${sideHead("R", "之后：新做法")}<div class="vz-stage"><svg viewBox="0 0 360 180" id="vzgR" role="img" aria-label="新做法流程动画"></svg></div><p class="vz-cap" id="vzpR"></p>${stepList(S.R)}</section>
     <div class="vz-end" id="vzend" hidden>
       <h2>看完了：这是演示样品，不是成品</h2>
-      <div class="vz-tot"><span class="muted">纸质合计（示意） <b style="color:#4d5c66">${mm(totL)}</b></span><span class="muted">新做法合计（示意，含新增动作） <b style="color:var(--teal)">${mm(totR)}</b></span></div>
+      <div class="vz-tot2"><span></span><b class="h">纸质</b><b class="h n">新做法</b>
+        <span class="k">病人填表 <i>实测参考</i></span><b>${mm(fillL)}</b><b class="n">${mm(fillR)}</b>
+        <span class="k">医护用时 <i>示意 · 含新增动作</i></span><b>${mm(totL - fillL)}</b><b class="n">${mm(totR - fillR)}</b></div>
       <div class="vz-endgrid">
-        <div class="card"><h3>医生少做的三件事</h3><ul><li>免手算分</li><li>免翻纸对比</li><li>免手工登记复测</li></ul></div>
+        <div class="card"><h3>少做的事（护士 / 医生）</h3><ul><li>收表、手算分、抄进电脑</li><li>翻上次的纸对比</li><li>手工登记复测</li></ul></div>
         <div class="card vz-newcard"><h3>新增的三个动作</h3><ul><li>贴码扫码</li><li>医生审阅签字</li><li>处理到期提醒</li></ul></div>
-        <div class="card"><h3>还要医院来定</h3><ul><li>高危提醒目前只在医生网页上，非门诊时段谁接手</li><li>MENQOL 空档分数的分级，需主任审定</li><li>外部大模型默认关闭，是否开启</li></ul></div>
+        <div class="card"><h3>还要医院来定</h3><ul><li>高危提醒目前只在医生网页上，非门诊时段谁接手</li><li>MENQOL 空档分数的分级，需主任审定</li><li>到期提醒由谁处理、怎么联系</li></ul></div>
       </div>
-      <p class="small muted">病人是虚构的。只有“填表”一段用了公开实测（儿科研究，仅作参考），其余时长都是示意。右边合计（示意）<span class="nw">${mm(totR)}</span>，含新增动作；左边合计（示意）<span class="nw">${mm(totL)}</span>。</p>
+      <p class="small muted">病人是虚构的。病人填表用了公开实测（美国儿科门诊研究，仅作参考），不占医护人手；医护用时都是示意，请按贵院实际改。</p>
       <div class="row"><button class="btn" id="vzagain">再看一遍</button><button class="btn ghost" data-go="hside">看“医院这边”</button></div>
     </div>
   </div>
@@ -217,7 +256,9 @@ export function visitView(root, D) {
 
   function side(k, t) {
     const arr = S[k], sc = sceneAt(arr, t), p = clamp((t - sc.t0) / (sc.t1 - sc.t0));
-    $("#vzg" + k).innerHTML = defs + sc.draw(p, t);
+    const g = $("#vzg" + k), mb = window.matchMedia("(max-width:820px)").matches && sc.m;
+    g.setAttribute("viewBox", mb ? "0 0 150 160" : "0 0 360 180");
+    g.innerHTML = defs + (mb ? sc.m(p, t) : sc.draw(p, t));
     $("#vzp" + k).textContent = typeof sc.cap === "function" ? sc.cap(p, t) : sc.cap;
     $("#vzw" + k).innerHTML = `<span class="tag gray">${sc.when}</span>${sc.isNew ? `<span class="tag amber">新增 ${sc.isNew}/3</span>` : ""}`;
     root.querySelectorAll(`.vz-side.${k === "L" ? "old" : "new"} .vz-steps li`).forEach((li, i) => { li.className = t >= arr[i].t1 ? "done" : arr[i] === sc ? "cur" : ""; });
