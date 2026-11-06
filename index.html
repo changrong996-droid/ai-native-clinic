@@ -8,16 +8,20 @@
 </head>
 <body>
 <header class="bar">
-  <div class="brand"><b>AI 原生专科随访</b><span class="ver"><span class="m-hide">演示样品 </span>v0.9<span class="m-hide"> · 更年期门诊 + 产科</span></span><span class="demo" title="演示数据全部是虚构的，只保存在本机浏览器里。量表文案为草案，须由医院审定。"><span class="m-hide">病人和数据都是虚构的，量表文字与分级为草案</span><span class="m-only">虚构数据 · 量表为草案</span></span><button id="reset" class="link small" title="演示数据只保存在本机浏览器里">重置<span class="m-hide">演示数据</span></button></div>
+  <div class="brand"><b>AI 原生专科随访</b><span class="ver"><span class="m-hide">演示稿 </span>v1.0<span class="m-hide"> · 更年期门诊 + 产科</span></span><span class="demo" title="演示数据全部是虚构的，只保存在本机浏览器里。量表文案为草案，须由医院审定。"><span class="m-hide">病人和数据都是虚构的，量表文字与分级为草案</span><span class="m-only">虚构数据 · 量表为草案</span></span><button id="reset" class="link small" title="演示数据只保存在本机浏览器里">重置<span class="m-hide">演示数据</span></button></div>
   <nav id="nav">
     <span class="grp">给医院看</span>
-    <button data-view="visit" class="on">看一次就诊</button>
-    <button data-view="value">一眼看懂</button>
-    <button data-view="ai">AI 能多做什么</button>
-    <button data-view="doctor">医生端</button>
-    <button data-view="patient">患者端</button>
-    <button data-view="board">科室看板</button>
+    <button data-view="pside" class="on">病人这边</button>
+    <button data-view="hside">医院这边</button>
+    <button data-view="visit">看一次就诊</button>
     <button data-view="confirm">上线前确认</button>
+    <details class="navmore" id="navmore"><summary>更多 ▾</summary><div class="navmenu">
+      <button data-view="doctor">医生端</button>
+      <button data-view="patient">患者端</button>
+      <button data-view="value">核对与时间账</button>
+      <button data-view="ai">AI 能多做什么</button>
+      <button data-view="board">科室看板</button>
+    </div></details>
     <span class="grp tech">给技术看</span>
     <button data-view="arch" class="t">架构全图</button>
     <button data-view="skills" class="t">配置与测试</button>

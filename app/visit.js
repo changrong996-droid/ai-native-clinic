@@ -20,15 +20,15 @@ const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 const ease = (x) => 0.5 - Math.cos(Math.PI * clamp(x)) / 2;
 
 /* ---------- SVG 小零件 ---------- */
-const C = { ink: "#1d2a33", mute: "#8b98a1", line: "#d9e1e5", teal: "#0f6e6a", teal2: "#e3f2f0", red: "#c0392b", red2: "#fdecea", amber: "#a86b00", amber2: "#fff4dc", skin: "#f1d3bf", pat: "#d98ca0", nurse: "#7fb7c9", doc: "#ffffff", paper: "#fffdf6" };
-const T = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.size || 12}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || "start"}" font-weight="${o.bold ? 700 : 400}">${s}</text>`;
-function person(x, y, kind, s = 1) {
+export const C = { ink: "#1d2a33", mute: "#8b98a1", line: "#d9e1e5", teal: "#0f6e6a", teal2: "#e3f2f0", red: "#c0392b", red2: "#fdecea", amber: "#a86b00", amber2: "#fff4dc", skin: "#f1d3bf", pat: "#d98ca0", nurse: "#7fb7c9", doc: "#ffffff", paper: "#fffdf6" };
+export const T = (x, y, s, o = {}) => `<text x="${x}" y="${y}" font-size="${o.size || 12}" fill="${o.fill || C.ink}" text-anchor="${o.anchor || "start"}" font-weight="${o.bold ? 700 : 400}">${s}</text>`;
+export function person(x, y, kind, s = 1) {
   const body = kind === "pat" ? C.pat : kind === "nurse" ? C.nurse : C.doc;
   const extra = kind === "doc" ? `<rect x="-15" y="-21" width="30" height="34" rx="12" fill="none" stroke="#9fb0ba" stroke-width="1.5"/><line x1="0" y1="-18" x2="0" y2="12" stroke="#9fb0ba"/><path d="M-6 -16 q6 14 12 0" fill="none" stroke="${C.teal}" stroke-width="1.6"/>`
     : kind === "nurse" ? `<rect x="-8" y="-50" width="16" height="6" rx="2" fill="#fff" stroke="${C.nurse}"/>` : "";
   return `<g transform="translate(${x},${y}) scale(${s})"><rect x="-15" y="-21" width="30" height="34" rx="12" fill="${body}"/><circle cy="-33" r="11" fill="${C.skin}"/>${extra}</g>`;
 }
-function paperSheet(x, y, w, h, rows, filled, opt = {}) {
+export function paperSheet(x, y, w, h, rows, filled, opt = {}) {
   let g = `<g transform="translate(${x},${y})"><rect width="${w}" height="${h}" rx="4" fill="${C.paper}" stroke="#c8c1a8"/>`;
   const rh = (h - 16) / rows;
   for (let i = 0; i < rows; i++) {
@@ -40,10 +40,10 @@ function paperSheet(x, y, w, h, rows, filled, opt = {}) {
   }
   return g + "</g>";
 }
-function tablet(x, y, w, h, inner) {
+export function tablet(x, y, w, h, inner) {
   return `<g transform="translate(${x},${y})"><rect width="${w}" height="${h}" rx="10" fill="#2b3a44"/><rect x="6" y="6" width="${w - 12}" height="${h - 12}" rx="6" fill="#fff"/>${inner}</g>`;
 }
-function monitor(x, y, w, h, inner) {
+export function monitor(x, y, w, h, inner) {
   return `<g transform="translate(${x},${y})"><rect x="${w / 2 - 6}" y="${h}" width="12" height="14" fill="#9fb0ba"/><rect x="${w / 2 - 26}" y="${h + 12}" width="52" height="5" rx="2" fill="#9fb0ba"/><rect width="${w}" height="${h}" rx="6" fill="#2b3a44"/><rect x="5" y="5" width="${w - 10}" height="${h - 10}" rx="3" fill="#f7fafb"/><g transform="translate(5,5)">${inner}</g></g>`;
 }
 function bubble(x, y, w, s, who = "doc", show = 1) {
@@ -53,10 +53,10 @@ function bubble(x, y, w, s, who = "doc", show = 1) {
 }
 function badgeNew(n) { return `<g transform="translate(232,8)"><rect width="120" height="22" rx="11" fill="${C.amber2}" stroke="#e6c27a"/>${T(60, 15, `新增动作 ${n}/3`, { size: 12, fill: C.amber, anchor: "middle", bold: true })}</g>`; }
 function desk(y = 168) { return `<rect x="10" y="${y}" width="340" height="6" rx="3" fill="#e6ebee"/>`; }
-function calendar(x, y, label) {
+export function calendar(x, y, label) {
   return `<g transform="translate(${x},${y})"><rect width="74" height="66" rx="6" fill="#fff" stroke="${C.line}"/><rect width="74" height="18" rx="6" fill="${C.teal}"/><rect y="12" width="74" height="6" fill="${C.teal}"/>${T(37, 46, label, { size: 15, anchor: "middle", bold: true, fill: C.teal })}</g>`;
 }
-function qr(x, y, s) {
+export function qr(x, y, s) {
   let g = `<g transform="translate(${x},${y})"><rect width="${s}" height="${s}" fill="#fff" stroke="${C.ink}" stroke-width="1.5"/>`;
   const n = 7, c = (s - 8) / n;
   for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if ((i * 3 + j * 5 + i * j) % 3 === 0 || (i < 2 && j < 2) || (i > 4 && j < 2) || (i < 2 && j > 4)) g += `<rect x="${4 + i * c}" y="${4 + j * c}" width="${c}" height="${c}" fill="${C.ink}"/>`;
@@ -183,13 +183,13 @@ export function visitView(root, D) {
   const sideHead = (k, name) => `<div class="vz-sh"><h2>${name}</h2><div class="vz-timer"><span class="lbl">量表相关累计用时</span><span class="vz-clock" id="vzc${k}">0秒</span></div></div><div class="vz-sub"><span id="vzw${k}"></span><span id="vzs${k}"></span></div>`;
   root.innerHTML = `<div class="vz pg">
   <div class="ph"><div>
-    <h1>看一次就诊：纸质量表 vs 新做法</h1>
-    <p class="lead">同一位病人、同一次复诊，左右同时播放。只看，不用点。<span class="vz-who"><span class="tag amber">演示用虚构病人</span>赵女士，51 岁，更年期门诊复诊；填 MENQOL 和 PHQ-9。</span></p>
+    <h1>看一次就诊：之前 vs 之后（完整版）</h1>
+    <p class="lead">同一位虚构病人（赵女士，51 岁，复诊）左右同时播放，只看不用点。</p>
   </div><div class="ph-act">${pop("计时说明", srcNote)}<span id="vzallslot"></span></div></div>
   <div class="vz-note" id="vznote" aria-live="polite"></div>
   <div class="vz-split" id="vzsplit">
-    <section class="vz-side old">${sideHead("L", "现在：纸质量表")}<div class="vz-stage"><svg viewBox="0 0 360 180" id="vzgL" role="img" aria-label="纸质量表流程动画"></svg></div><p class="vz-cap" id="vzpL"></p>${stepList(S.L)}</section>
-    <section class="vz-side new">${sideHead("R", "新做法")}<div class="vz-stage"><svg viewBox="0 0 360 180" id="vzgR" role="img" aria-label="新做法流程动画"></svg></div><p class="vz-cap" id="vzpR"></p>${stepList(S.R)}</section>
+    <section class="vz-side old">${sideHead("L", "之前：纸质量表")}<div class="vz-stage"><svg viewBox="0 0 360 180" id="vzgL" role="img" aria-label="纸质量表流程动画"></svg></div><p class="vz-cap" id="vzpL"></p>${stepList(S.L)}</section>
+    <section class="vz-side new">${sideHead("R", "之后：新做法")}<div class="vz-stage"><svg viewBox="0 0 360 180" id="vzgR" role="img" aria-label="新做法流程动画"></svg></div><p class="vz-cap" id="vzpR"></p>${stepList(S.R)}</section>
     <div class="vz-end" id="vzend" hidden>
       <h2>看完了：这是演示样品，不是成品</h2>
       <div class="vz-tot"><span class="muted">纸质合计（示意） <b style="color:#4d5c66">${mm(totL)}</b></span><span class="muted">新做法合计（示意，含新增动作） <b style="color:var(--teal)">${mm(totR)}</b></span></div>
@@ -199,7 +199,7 @@ export function visitView(root, D) {
         <div class="card"><h3>还要医院来定</h3><ul><li>高危提醒目前只在医生网页上，非门诊时段谁接手</li><li>MENQOL 空档分数的分级，需主任审定</li><li>外部大模型默认关闭，是否开启</li></ul></div>
       </div>
       <p class="small muted">病人是虚构的。只有“填表”一段用了公开实测（儿科研究，仅作参考），其余时长都是示意。右边合计（示意）<span class="nw">${mm(totR)}</span>，含新增动作；左边合计（示意）<span class="nw">${mm(totL)}</span>。</p>
-      <div class="row"><button class="btn" id="vzagain">再看一遍</button><button class="btn ghost" data-go="value">看“一眼看懂”</button></div>
+      <div class="row"><button class="btn" id="vzagain">再看一遍</button><button class="btn ghost" data-go="hside">看“医院这边”</button></div>
     </div>
   </div>
   <div class="vz-ctrl" id="vzctrl">

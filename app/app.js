@@ -1,6 +1,7 @@
 import { score } from "../engine/engine.js";
 import { runGolden } from "../tests/run.js";
 import { visitView, stopVisit } from "./visit.js";
+import { patientSide, hospitalSide } from "./sides.js";
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -11,7 +12,7 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 const SKILLS = {}, ROLES = {};
 const mob = () => window.matchMedia("(max-width:820px)").matches;
 const KEY = "anc-v2";
-let db, view = "visit", sel = null, pf = null;
+let db, view = "pside", sel = null, pf = null;
 
 /* ---------- 时间线（每人一条只追加的事件流） ---------- */
 function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
@@ -113,8 +114,12 @@ async function modelBrief(pid) {
 /* ---------- 视图 ---------- */
 function render() {
   document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
+  const more = $("#navmore"), inMore = more && more.querySelector(`[data-view="${view}"]`);
+  if (more) { more.classList.toggle("on", !!inMore); more.open = false; $("#navmore summary").textContent = inMore ? `更多 · ${inMore.textContent} ▾` : "更多 ▾"; }
+  const act = more && more.classList.contains("on") ? more : document.querySelector("#nav > button.on");
+  if (act && mob()) { const n = $("#nav"), r = act.getBoundingClientRect(), nr = n.getBoundingClientRect(); if (r.right > nr.right || r.left < nr.left) n.scrollLeft += r.left - nr.left - 40; }
   stopVisit();
-  ({ visit, value, ai, board, concept, arch, patient, doctor, skills, confirm })[view]();
+  ({ pside, hside, visit, value, ai, board, concept, arch, patient, doctor, skills, confirm })[view]();
 }
 /* ---------- 说明层：写给医生、科主任、信息科看 ---------- */
 const EXPLAIN = {
@@ -226,10 +231,11 @@ const CONFIRM = [
 function confirm() {
   const groups = [...new Set(CONFIRM.map((c) => c[0]))];
   const grp = (g) => `<div class="cf-grp"><h2>${g}</h2>${CONFIRM.map((c, i) => [c, i]).filter(([c]) => c[0] === g).map(([c, i]) =>
-    `<div class="cf-it"><span class="n">${i + 1}</span><span>${c[1]}</span><span class="who">${c[3]}</span><span class="why">为什么要问：${c[2]}</span></div>`).join("")}</div>`;
+    `<div class="cf-it" title="为什么要问：${esc(c[2])}"><span class="n">${i + 1}</span><span>${c[1]}</span><span class="who">${c[3]}</span></div>`).join("")}</div>`;
   $("#main").innerHTML = `<div class="pg">
   <div class="ph"><div><h1>真正上线前，需要医院定下来的事 <span class="tag amber">${CONFIRM.length} 条</span></h1>
-    <p class="lead">分两类：用页面里的虚构数据体验，不需要任何确认；用真实患者试用之前，下面每一条都必须由医院定。</p></div></div>
+    <p class="lead">用虚构数据体验不需要确认；用真实患者试用之前，每一条都要医院定。</p></div>
+    <div class="ph-act">${pop("为什么要问", `<h2>每一条为什么要问</h2><table class="tech">${CONFIRM.map((c, i) => `<tr><td>${i + 1}</td><td>${esc(c[1])}</td><td class="muted">${esc(c[2])}</td></tr>`).join("")}</table>`, "info")}</div></div>
   <div class="cf cf-scroll"><div class="cf-col">${grp(groups[0])}</div><div class="cf-col">${groups.slice(1).map(grp).join("")}</div></div></div>`;
 }
 /* ---------- 价值页：一眼看出好处 ---------- */
@@ -285,25 +291,16 @@ function value() {
           <label>医生每份翻看对比（分钟）<input type="number" id="c3" value="2" step="0.5"></label></div>
         <div id="calcout" class="big2"></div>
         <p class="small muted">默认值是假设，请改成贵院的实际数字。按每月 22 个工作日计算；有简报后，医生每份按 0.5 分钟计（这是假设值，请按实际改）；另外还会新增“审阅签字、处理提醒”等工作，别忘了算进去。</p></div>`;
-  const guide = `<h2>建议这样看</h2><p>先看“当场核对”的三处，再看<a class="link" data-go="ai">AI 能多做什么</a>，然后打开<a class="link" data-go="doctor">医生端</a>看看简报，最后打开<a class="link" data-go="board">科室看板</a>。如果想自己做一遍，可以进<a class="link" data-go="patient">患者端</a>。上线前需要医院定下来的事项，见“上线前确认”。</p>`;
+  const guide = `<h2>建议这样看</h2><p>先看“病人这边”“医院这边”两页，再看“当场核对”的三处和<a class="link" data-go="ai">AI 能多做什么</a>，然后打开<a class="link" data-go="doctor">医生端</a>看看简报，最后打开<a class="link" data-go="board">科室看板</a>。如果想自己做一遍，可以进<a class="link" data-go="patient">患者端</a>。上线前需要医院定下来的事项，见“上线前确认”。</p>`;
   $("#main").innerHTML = `<div class="pg">
-  <div class="ph"><div><h1>把纸质量表换成一张二维码：医生少做三件事，科室多出一份数据</h1>
-    <p class="lead">三件事：免手算分、免翻纸对比、免手工登记复测。不换现有系统；新增的动作只有：贴码扫码、医生审阅签字、处理到期提醒。可以和现有做法并行试用，随时可以停。</p>
-    <div class="chipline"><span class="small muted m-hide">试用代价：</span><span class="chk m-hide">不换系统</span><span class="chk m-hide">几乎不用培训</span><span class="chk m-hide">随时可停</span>${pop("试用的代价与注意", cost)}${M ? pop("前后对比 7 项", `<h2>同一个门诊日，前后对比</h2>${cmpTable}`) + pop("算一笔时间账", `<h2>算一笔时间账</h2>${calcHTML}${upmc}`) : ""}${pop("怎么看", guide)}</div></div></div>
-  <div class="v-kpis">
-    <div class="kpi"><div class="big">0 秒</div><p>提交即出分。不用手算，也不用录入。</p></div>
-    <div class="kpi"><div class="big">${CASES.length} 处</div><p>贵院现有量表文档里会判错或判不出的地方，系统自动挡住<span class="m-hide">（见“当场核对”）</span>。</p></div>
-    <div class="kpi"><div class="big">${k.patients} 人</div><p>上线半年，科室自动积累的随访档案（模拟）。<a class="link" data-go="board">看科室看板 →</a></p></div>
-  </div>
-  <div class="v-main">
-    <div class="v-col">
-      <div class="card m-hide"><div class="sec-t">同一个门诊日，前后对比</div>${cmpTable}<p class="small muted" style="margin-top:4px">${caveat}</p></div>
-      ${M ? "" : `<div class="card calc"><div class="row" style="justify-content:space-between"><div class="sec-t">算一笔时间账</div>${pop("别人的实测参考", upmc)}</div>${calcHTML}</div>`}
-    </div>
-    <div class="card"><div class="sec-t" id="check">用贵院自己的量表文档，当场核对</div>
-      <p class="small muted m-hide">“按原文档”完全按贵院提供的 PHQ-9、MENQOL 文档中的标准来判断，“本系统”是本系统的结果，都是现场算出来的。</p>
+  <div class="ph"><div><h1>用贵院自己的量表文档当场核对，再算一笔时间账</h1>
+    <p class="lead">不换现有系统，可以和纸质并行试用，随时可停。</p></div>
+    <div class="ph-act">${pop("试用的代价与注意", cost, "info")}${pop("前后对比 7 项", `<h2>同一个门诊日，前后对比</h2>${cmpTable}<p class="small muted" style="margin-top:6px">${caveat}</p>`)}${pop("怎么看", guide)}</div></div>
+  <div class="ck2">
+    <div class="card"><div class="sec-t" id="check">当场核对：原文档 ✗ vs 本系统 ✓（现场算出）</div>
       ${cases}
-      <p class="small muted m-hide" style="margin-top:4px">另外，原 MENQOL 文档第 20 题、第 23 题下的程度编号写成了“10.1”和“13.1”，纸质录入时容易串题；系统按题目自动对应，不存在这个问题。</p></div>
+      <p class="small muted" style="margin-top:4px">另：原 MENQOL 第 20、23 题的程度编号写成“10.1”“13.1”，纸质录入容易串题。</p></div>
+    <div class="card calc"><div class="row" style="justify-content:space-between"><div class="sec-t">算一笔时间账（示意）</div>${pop("别人的实测参考", upmc)}</div>${calcHTML}</div>
   </div></div>`;
   bindGo();
   const calc = () => {
@@ -313,6 +310,8 @@ function value() {
   };
   ["#c1", "#c2", "#c3"].forEach((s) => ($(s).oninput = calc)); calc();
 }
+function pside() { patientSide($("#main"), bindGo); }
+function hside() { hospitalSide($("#main"), bindGo); }
 function visit() { visitView($("#main"), { SKILLS, score, legacyPHQ, legacyMENQOL, bindGo }); }
 function bindGo() { document.querySelectorAll("[data-go]").forEach((a) => (a.onclick = (e) => { e.preventDefault(); const d = a.closest("details"); if (d) d.open = false; view = a.dataset.go; render(); window.scrollTo(0, 0); })); }
 /* ---------- 科室看板：模拟三个月后自动得到的数据 ---------- */
@@ -360,7 +359,7 @@ function board() {
   const mx = Math.max(...Object.values(months));
   $("#main").innerHTML = `<div class="pg">
   <div class="ph"><div><h1>更年期门诊 · 科室看板 <span class="tag amber">模拟数据</span></h1>
-    <p class="lead">这是按上述流程模拟的半年数据，用来展示上线后、不额外花人力就能看到的内容。数字本身不代表贵院的实际情况。</p></div>
+    <p class="lead">模拟半年数据：上线后不额外花人力就能看到这些。数字不代表贵院实际。</p></div>
     <div class="ph-act"><button class="btn ghost" id="csv">导出 Excel</button></div></div>
   <div class="kp4">
     <div class="card"><div class="big">${k.patients}</div><p>建档患者</p></div>
@@ -369,10 +368,10 @@ function board() {
     <div class="card"><div class="big">${k.crises} 例</div><p>自伤风险提醒${k.crises ? `，平均 ${k.resp} 分钟内有人跟进` : ""}</p></div>
   </div>
   <div class="g2b">
-    <div class="card"><h2>复测患者：首诊与 3 个月后</h2><p class="small muted">${paired.length} 名完成复测的患者，各维度平均分（1–8，越低越好）</p>
+    <div class="card"><h2 title="这类前后对比数据，可以直接用于科室质控、年度总结和临床研究。">复测患者：首诊与 3 个月后</h2><p class="small muted">${paired.length} 名完成复测的患者，各维度平均分（1–8，越低越好）</p>
       ${doms.map((d) => `<div class="pair"><span>${d.name}</span><div><i style="width:${(d.a / 8) * 100}%" class="a"></i><i style="width:${(d.b / 8) * 100}%" class="b"></i></div><span class="small">${d.a.toFixed(2)} → <b>${d.b.toFixed(2)}</b></span></div>`).join("")}
       <p class="small"><span class="sw a" style="margin-left:0"></span>首诊 <span class="sw b"></span>3 个月后</p>
-      <p class="small muted">这类前后对比数据，可以直接用于科室质控、年度总结和临床研究。</p></div>
+</div>
     <div class="card"><h2>每月测评量</h2><div class="months">${Object.entries(months).sort((a, b) => parseInt(a[0]) - parseInt(b[0])).map(([m, v]) => `<div><i style="height:calc((100% - 36px) * ${(v / mx).toFixed(3)})"></i><span>${m}</span><b>${v}</b></div>`).join("")}</div>
       <p class="small muted">包括首次测评、复测和加做的 PHQ-9。</p></div>
   </div></div>`;
@@ -402,14 +401,14 @@ async function ai() {
     <h3>② 主任用一句话提问</h3><p class="small">AI 只负责听懂问题 · 名单直接从档案里查，不靠 AI 编</p><p><b>传统软件：</b>只能看已经开发好的报表。想换一种问法，就得提需求、等厂商改报表。</p><p class="small muted">条件显示在名单上方，主任一眼就能看出 AI 有没有听懂；听错了，点一下就能改。名单本身是从档案里查出来的，不会被 AI 改动。</p>`;
   $("#main").innerHTML = `<div class="pg aipg">
   <div class="ph"><div><h1>同一件事，两种做法：AI 只负责听、写、问</h1>
-    <p class="lead m-hide">下面三个例子都是真实 AI 跑出来的结果（${esc(R.recorded_at)} 事先跑好，网页本身不联网调用 AI）。分工很简单：<b>算分、分级、危险提醒，一律由电脑按量表标准算，AI 不参与</b>；AI 只负责听懂和起草，它给的东西都要经过患者或医生确认。</p></div></div>
+    <p class="lead m-hide">三个例子都是真实 AI 事先跑好的结果；算分、分级、危险提醒仍由电脑按量表标准算。</p></div><div class="ph-act">${pop("怎么读这一页", howto, "info")}</div></div>
   <div class="ai3">
     <div class="card"><h2>① 听懂患者的原话</h2><span class="m-hide"><span class="tag gray">AI 装在医院自己的电脑上 · 病人信息不出医院</span></span>
       <div class="oldbox m-hide"><b>传统软件</b>29 道题逐题点“有 / 没有”，再逐题选困扰程度。年纪大或者不识字的患者常常要护士陪着填。</div>
       <div class="seg">${R.intake.map((x, i) => `<button class="${i === aiState.u ? "on" : ""}" data-u="${i}">原话 ${i + 1}</button>`).join("")}</div>
       <blockquote>“${esc(R.intake[aiState.u].text)}”</blockquote>
       <div id="chips"></div>
-      <p class="small muted m-hide">绿色是 AI 帮患者勾好的，黄色是 AI 不太确定、会再问一句的。患者最后逐项核对，勾错的划掉，再选困扰程度，分数由电脑按量表标准算。用时 ${(R.intake[aiState.u].ms / 1000).toFixed(1)} 秒。
+      <p class="small muted"><span class="m-hide">绿色 = AI 勾好，黄色 = 不太确定。用时 ${(R.intake[aiState.u].ms / 1000).toFixed(1)} 秒。</span>
       <label class="nw"><input type="checkbox" id="gold" ${aiState.gold ? "checked" : ""}> 和人工标注对照</label></p></div>
     <div class="card"><h2>② 主任用一句话提问</h2><span class="m-hide"><span class="tag gray">AI 只负责听懂问题 · 名单直接从档案里查，不靠 AI 编</span></span>
       <div class="oldbox m-hide"><b>传统软件</b>只能看已经开发好的报表。想换一种问法，就得提需求、等厂商改报表。</div>
@@ -421,7 +420,7 @@ async function ai() {
       ${R.brief.map((b, i) => `<div class="brief ${i ? "m-hide" : ""}"><b>第 ${i + 1} 次</b> ${checkNums(b.text, R.brief_facts)}</div>`).join("")}
       ${pop("简报全文与固定模板", `<h2>同一份事实生成两次</h2><p class="small muted">同一份事实生成两次。<span class="ok">绿色</span>数字在系统算出的分数里找得到，<span class="bad">红色</span>找不到，需要医生核对。</p><div class="brief"><b>第 1 次</b> ${checkNums(R.brief[0].text, R.brief_facts)}</div><div class="brief" style="margin-top:6px"><b>第 2 次</b> ${checkNums(R.brief[1].text, R.brief_facts)}</div><h3 style="margin-top:10px">传统软件 / 固定模板</h3><p>${esc([].concat(templateBrief("p1")).join(" "))}</p><p class="small muted">每句话都可靠，但措辞固定，也不会把几项变化联系起来看。</p>`, "m-only")}</div>
   </div>
-  <div class="concl"><b>一句话：</b>要求精确的（算分、分级、危险提醒）仍由电脑按量表标准算，AI 只负责听、写、问。以后加一个科室，只要把这个科室的量表标准整理进去，不用重新开发一套软件。 ${pop("怎么读这一页", howto, "m-only")}</div></div>`;
+  <div class="concl"><b>一句话：</b>要求精确的仍由电脑按量表标准算，AI 只负责听、写、问；加科室只需整理量表标准，不用重新开发。</div></div>`;
   const it = R.intake[aiState.u].answers, g = new Set(GOLD[aiState.u]), ok = new Set(OKX[aiState.u]);
   $("#chips").innerHTML = Object.entries(it).filter(([, v]) => v.choice === "present").map(([k, v]) => {
     const low = v.confidence < 0.9, mark = aiState.gold ? (g.has(k) ? " ✓" : ok.has(k) ? " ≈" : " ✗") : "";
@@ -446,7 +445,7 @@ function renderAsk() {
   $("#askout").innerHTML = `<p class="small muted">AI 听懂的查询条件（AI 识别耗时 ${(a.ms / 1000).toFixed(1)} 秒，不含医生核对）：</p>
     <div>${Object.entries(a.filter).map(([k, v]) => `<span class="chip ${v.confidence < 0.9 ? "low" : "hi"}">${LBL[k][v.choice] || v.choice}</span>`).join("")}</div>
     <p style="margin-top:4px">从模拟档案中查出 <b style="font-size:17px;color:var(--teal)">${rows.length}</b> 人${rows.length ? "：" : "。"}${rows.slice(0, 8).map((x) => `<span class="chip">${x.no} 号</span>`).join("")}${rows.length > 8 ? " …" : ""}</p>
-    <p class="small muted m-hide">条件显示在名单上方，主任一眼就能看出 AI 有没有听懂；听错了，点一下就能改。名单本身是从档案里查出来的，不会被 AI 改动。</p>`;
+`;
 }
 function checkNums(text, facts) {
   const pool = new Set((JSON.stringify(facts).match(/\d+(\.\d+)?/g) || []).map(Number));
@@ -784,7 +783,10 @@ async function boot() {
   let wasMob = mob(); window.addEventListener("resize", () => { if (mob() !== wasMob) { wasMob = mob(); if (view !== "visit") render(); } });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelectorAll("details.pop[open]").forEach((d) => (d.open = false)); });
   $("#reset").onclick = () => { localStorage.removeItem(KEY); pf = null; sel = null; seed(); render(); };
-  const h = location.hash.slice(1); if (["visit", "value", "ai", "board", "arch", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
+  const nm = $("#navmore");
+  if (nm) nm.addEventListener("toggle", () => { if (!nm.open) return; const r = nm.querySelector("summary").getBoundingClientRect(), m = nm.querySelector(".navmenu");
+    m.style.top = r.bottom + 4 + "px"; m.style.left = Math.max(6, Math.min(r.left, innerWidth - m.offsetWidth - 6)) + "px"; });
+  const h = location.hash.slice(1); if (["pside", "hside", "visit", "value", "ai", "board", "arch", "concept", "patient", "doctor", "skills", "confirm"].includes(h)) view = h;
   render();
 }
 boot();
