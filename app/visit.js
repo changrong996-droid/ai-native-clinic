@@ -87,7 +87,7 @@ function buildScenes(d) {
   const L = [
     { t0: 0, t1: 8, clinic: 30, when: "候诊", title: "发纸质表", cap: "挂号后，护士发纸质表和笔：MENQOL 29 题 + PHQ-9 9 题。",
       draw: (p) => desk() + person(70, 150, "nurse") + person(280, 150, "pat") + `<g transform="translate(${90 + ease(p) * 140},${112 - Math.sin(Math.PI * p) * 20})">${paperSheet(0, 0, 34, 44, 6, 0)}</g>` },
-    { t0: 8, t1: 32, clinic: 204, real: true, when: "候诊", title: "病人用笔填表", cap: "病人在候诊区用笔一题一题填。纸质平均 3分24秒（UPMC 儿科门诊实测，仅作参考）。",
+    { t0: 8, t1: 32, clinic: 204, real: true, when: "候诊", title: "病人用笔填表", cap: "病人在候诊区用笔一题一题填。研究里纸质平均 3分24秒（UPMC 儿科门诊，问卷比本院短，只看比例）。",
       draw: (p) => { const n = Math.floor(p * 38); return desk() + person(70, 150, "pat") + paperSheet(130, 22, 120, 140, 12, Math.min(12, n % 13 === 0 && n ? 12 : n % 13)) + T(260, 40, `第 ${Math.max(1, n)} / 38 题`, { size: 12, fill: C.mute }) + `<path d="M${140 + (n % 4) * 25} ${40 + (n % 12) * 10} l14 -26" stroke="#34495e" stroke-width="3" stroke-linecap="round"/>` + (n >= 37 ? T(260, 60, `第 9 题：${d.q9opt}`, { size: 12, fill: C.red }) : ""); } },
     { t0: 32, t1: 40, clinic: 30, when: "候诊", title: "护士收表", cap: "护士收表，夹进病历，等着算分。",
       draw: (p) => desk() + person(80, 150, "nurse") + `<g transform="translate(${230 - ease(p) * 110},${70 + ease(p) * 30})">${paperSheet(0, 0, 50, 64, 7, 7)}</g>` + `<rect x="250" y="120" width="80" height="44" rx="4" fill="#e9dfc7" stroke="#c8b98f"/>` + T(290, 147, "病历夹", { size: 12, anchor: "middle", fill: "#7d6a3d" }) },
@@ -116,7 +116,7 @@ function buildScenes(d) {
   const R = [
     { t0: 0, t1: 6, clinic: 20, when: "候诊", title: "贴码扫码", isNew: 1, cap: "护士把二维码贴在桌上，病人扫码打开问卷（也可以用科室平板）。",
       draw: (p) => desk() + badgeNew(1) + person(70, 150, "nurse") + qr(130, 110, 50) + person(280, 150, "pat") + tablet(222, 96, 44, 62, "") + `<path d="M222 ${110 + Math.sin(p * 12) * 14} L184 ${135}" stroke="${C.teal}" stroke-width="2" stroke-dasharray="4 3" opacity="${clamp(p * 3)}"/>` },
-    { t0: 6, t1: 17.9, clinic: 101, real: true, when: "候诊", title: "平板上一屏一题", cap: "病人在平板上一屏一题点选。平板平均 1分41秒（同一研究，仅作参考）。",
+    { t0: 6, t1: 17.9, clinic: 101, real: true, when: "候诊", title: "平板上一屏一题", cap: "病人在平板上一屏一题点选。研究里平板平均 1分41秒（约省一半，只看比例）。",
       draw: (p) => { const n = Math.max(1, Math.ceil(p * 38)); const q9 = n >= 37;
         return desk() + person(70, 150, "pat") + tablet(130, 20, 150, 146, `<rect x="16" y="16" width="${118 * p}" height="5" rx="2" fill="${C.teal}"/><rect x="16" y="16" width="118" height="5" rx="2" fill="none" stroke="${C.line}"/>` + T(16, 42, q9 ? "PHQ-9 第 9 题" : `第 ${n} / 38 题`, { size: 12, fill: C.mute }) +
           ["完全不会", "好几天", "一半以上的天数", "几乎每天"].map((o, i) => { const on = q9 ? i === 1 : i === n % 4; return `<rect x="16" y="${52 + i * 20}" width="118" height="16" rx="5" fill="${on ? C.teal2 : "#fff"}" stroke="${on ? C.teal : C.line}"/>${T(24, 64 + i * 20, o, { size: 10.5 })}`; }).join("")); } },
@@ -216,7 +216,7 @@ export function visitView(root, D) {
   const fillL = S.L.filter((s) => s.real).reduce((a, s) => a + s.clinic, 0), fillR = S.R.filter((s) => s.real).reduce((a, s) => a + s.clinic, 0);
   const stepList = (arr) => `<ol class="vz-steps">${arr.map((s, i) => `<li data-i="${i}">${s.isNew ? '<span class="vz-new">新增</span>' : ""}${s.title}</li>`).join("")}</ol>`;
   const pop = (label, html, cls = "") => `<details class="pop ${cls}"><summary>${label}</summary><div class="pop-body"><button class="pop-x" type="button" aria-label="关闭" onclick="this.closest('details').open=false">×</button>${html}</div></details>`;
-  const srcNote = `<h2>计时说明</h2><p>只有“填表”一段用了公开实测——美国匹兹堡大学医学中心（UPMC）儿科社区门诊，纸质平均 3分24秒，平板平均 1分41秒（Hanmer 等，Applied Clinical Informatics 2021，<a class="link" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8046593" target="_blank" rel="noopener">原文</a>）；这是儿科研究，仅作参考。其余环节的时长一律是示意：手算录入 3 分钟、医生翻看对比 2 分钟、有简报后 0.5 分钟取自“算一笔时间账”的默认假设值，其他为估计，不是实测。分数由电脑按量表标准现场算出。</p>`;
+  const srcNote = `<h2>计时说明</h2><p>只有“填表”一段用了公开实测——美国匹兹堡大学医学中心（UPMC）儿科社区门诊，纸质平均 3分24秒，平板平均 1分41秒（Hanmer 等，Applied Clinical Informatics 2021，<a class="link" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8046593" target="_blank" rel="noopener">原文</a>）；这是儿科研究，仅作参考。其余环节的时长一律是示意：手算录入 3 分钟、医生翻看对比 2 分钟、有简报后 0.5 分钟取自“算一笔时间账”的默认假设值，其他为估计，不是实测。分数由电脑按量表标准现场算出。研究里的问卷都很短（抑郁 2 题、哮喘 5 题、孤独症筛查 20 题等），本院一次 38 题会更久；能借鉴的是“平板比纸质约省一半时间”，不是具体秒数。</p>`;
   const sideHead = (k, name) => `<div class="vz-sh"><h2>${name}</h2><div class="vz-timer"><span class="lbl">量表相关累计用时</span><span class="vz-clock" id="vzc${k}">0秒</span></div></div><div class="vz-sub"><span id="vzw${k}"></span><span id="vzs${k}"></span></div>`;
   root.innerHTML = `<div class="vz pg">
   <div class="ph"><div>
@@ -230,14 +230,14 @@ export function visitView(root, D) {
     <div class="vz-end" id="vzend" hidden>
       <h2>看完了：这是演示样品，不是成品</h2>
       <div class="vz-tot2"><span></span><b class="h">纸质</b><b class="h n">新做法</b>
-        <span class="k">病人填表 <i>实测参考</i></span><b>${mm(fillL)}</b><b class="n">${mm(fillR)}</b>
+        <span class="k">病人填表 <i>研究参考 · 只看比例</i></span><b>${mm(fillL)}</b><b class="n">${mm(fillR)}</b>
         <span class="k">医护用时 <i>示意 · 含新增动作</i></span><b>${mm(totL - fillL)}</b><b class="n">${mm(totR - fillR)}</b></div>
       <div class="vz-endgrid">
         <div class="card"><h3>少做的事（护士 / 医生）</h3><ul><li>收表、手算分、抄进电脑</li><li>翻上次的纸对比</li><li>手工登记复测</li></ul></div>
         <div class="card vz-newcard"><h3>新增的三个动作</h3><ul><li>贴码扫码</li><li>医生审阅签字</li><li>处理到期提醒</li></ul></div>
         <div class="card"><h3>还要医院来定</h3><ul><li>高危提醒目前只在医生网页上，非门诊时段谁接手</li><li>MENQOL 空档分数的分级，需主任审定</li><li>到期提醒由谁处理、怎么联系</li></ul></div>
       </div>
-      <p class="small muted">病人是虚构的。病人填表用了公开实测（美国儿科门诊研究，仅作参考），不占医护人手；医护用时都是示意，请按贵院实际改。</p>
+      <p class="small muted">病人是虚构的。病人填表借用公开研究（美国儿科门诊，问卷比本院短，只说明“约省一半”），不占医护人手；医护用时都是示意，请按贵院实际改。</p>
       <div class="row"><button class="btn" id="vzagain">再看一遍</button><button class="btn ghost" data-go="hside">看“医院这边”</button></div>
     </div>
   </div>
@@ -265,7 +265,7 @@ export function visitView(root, D) {
     const c = clinicAt(arr, t);
     $("#vzc" + k).textContent = mm(c.s);
     const cur = c.cur;
-    $("#vzs" + k).innerHTML = P.t >= END_T ? `<span class="tag gray">合计（示意）</span>` : !cur ? (t >= arr.at(-1).t1 ? `<span class="tag gray">合计（示意）</span>` : "") : cur.real ? `<span class="tag">填表 · 实测参考</span>` : cur.wait ? `<span class="tag gray">已完成，等叫号</span>` : cur.clinic ? `<span class="tag gray">${cur.short || cur.title} · 示意</span>` : `<span class="tag gray">${cur.tag || "不计时"}</span>`;
+    $("#vzs" + k).innerHTML = P.t >= END_T ? `<span class="tag gray">合计（示意）</span>` : !cur ? (t >= arr.at(-1).t1 ? `<span class="tag gray">合计（示意）</span>` : "") : cur.real ? `<span class="tag">填表 · 研究参考</span>` : cur.wait ? `<span class="tag gray">已完成，等叫号</span>` : cur.clinic ? `<span class="tag gray">${cur.short || cur.title} · 示意</span>` : `<span class="tag gray">${cur.tag || "不计时"}</span>`;
   }
   function draw() {
     const t = P.t;
@@ -298,7 +298,7 @@ export function visitView(root, D) {
   function pause() { P.playing = false; cancelAnimationFrame(P.raf); draw(); }
   function seek(t) { P.t = clamp(t, 0, TOTAL); P.hold = 0; P.held = new Set(PAUSES.filter((p) => p.t < P.t).map((p) => p.t)); draw(); }
   function renderStatic() {
-    const card = (sc) => `<div class="vz-scard ${sc.isNew ? "isnew" : ""}"><div><span class="tag gray">${sc.when}</span>${sc.isNew ? `<span class="tag amber">新增动作 ${sc.isNew}/3</span>` : ""}${sc.real ? `<span class="tag">实测参考</span>` : sc.clinic ? `<span class="tag gray">示意 ${mm(sc.clinic)}</span>` : ""}</div><b>${sc.title}</b><svg viewBox="0 0 360 180">${defs}${sc.draw(1, sc.t1 - 0.01)}</svg><p class="small">${typeof sc.cap === "function" ? sc.cap(1, sc.t1 - 0.01) : sc.cap}</p></div>`;
+    const card = (sc) => `<div class="vz-scard ${sc.isNew ? "isnew" : ""}"><div><span class="tag gray">${sc.when}</span>${sc.isNew ? `<span class="tag amber">新增动作 ${sc.isNew}/3</span>` : ""}${sc.real ? `<span class="tag">研究参考</span>` : sc.clinic ? `<span class="tag gray">示意 ${mm(sc.clinic)}</span>` : ""}</div><b>${sc.title}</b><svg viewBox="0 0 360 180">${defs}${sc.draw(1, sc.t1 - 0.01)}</svg><p class="small">${typeof sc.cap === "function" ? sc.cap(1, sc.t1 - 0.01) : sc.cap}</p></div>`;
     return `<h2>全部画面一览</h2>
       <div class="vz-sgrid"><div><h3>现在：纸质量表</h3>${S.L.map(card).join("")}</div><div><h3>新做法</h3>${S.R.map(card).join("")}</div></div>
       <h3>四个停顿点</h3>${PAUSES.map((p) => `<div class="vz-note on" style="margin:6px 0"><b>${p.title}</b><br>${p.body(d)}</div>`).join("")}`;

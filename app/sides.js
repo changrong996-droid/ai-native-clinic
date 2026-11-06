@@ -22,10 +22,10 @@ const ring = (x, y) => `<ellipse cx="${x}" cy="${y}" rx="13" ry="5" fill="none" 
 /* ---------- 病人这边 ---------- */
 const PAT = [
   { k: "填表", real: true,
-    a: { v: "3分24秒", s: "纸质，本院量表共 38 题", pic: paperSheet(38, 2, 44, 66, 10, 10) },
-    b: { v: "1分41秒", s: "一屏一题", pic: tablet(34, 1, 52, 70, opts(28, 1) + `<rect x="6" y="8" width="28" height="3" rx="1.5" fill="${C.teal}"/>`) } },
+    a: { v: "3分24秒", s: "纸质（研究里是短问卷）", pic: paperSheet(38, 2, 44, 66, 10, 10) },
+    b: { v: "1分41秒", s: "平板，约省一半时间", pic: tablet(34, 1, 52, 70, opts(28, 1) + `<rect x="6" y="8" width="28" height="3" rx="1.5" fill="${C.teal}"/>`) } },
   { k: "交完以后",
-    a: { v: "漏没漏题？", s: "表交给护士，填全没有自己不知道", pic: paperSheet(26, 2, 44, 66, 9, 6) + T(90, 48, "？", { size: 30, fill: C.mute, bold: true }) },
+    a: { v: "漏没漏题？", s: "交给护士就走，漏没漏题自己不知道", pic: paperSheet(26, 2, 44, 66, 9, 6) + T(90, 48, "？", { size: 30, fill: C.mute, bold: true }) },
     b: { v: "✓ 不漏题", s: "一题一屏答完才交，交完就完成", pic: tablet(34, 1, 52, 70, check(15, 30, 1.1) + T(26, 58, "已提交", { size: 9, anchor: "middle", fill: C.teal, bold: true })) } },
   { k: "3 个月后复测",
     a: { v: "靠记得", s: "回不回来，全靠自己记得", pic: `<g transform="translate(14,4) scale(.92)">${calendar(0, 0, "3 个月后")}</g>` + T(98, 48, "？", { size: 30, fill: C.mute, bold: true }) },
@@ -82,7 +82,7 @@ function row(it, i, o = {}) {
 const colHead = (a, b) => `<div class="cmp-row cmp-head"><div></div><div class="before">${a}</div><div></div><div class="after">${b}</div></div>`;
 
 export function patientSide(root, bindGo) {
-  const src = `<h2>出处与说明</h2><p>只有“填表”用了公开实测：美国匹兹堡大学医学中心（UPMC）儿科社区门诊，纸质平均 3 分 24 秒，平板平均 1 分 41 秒（Hanmer 等，Applied Clinical Informatics 2021，${SRC}）。这是儿科研究，仅作参考，不是贵院的数字。</p>
+  const src = `<h2>出处与说明</h2><p>只有“填表”用了公开实测：美国匹兹堡大学医学中心（UPMC）儿科社区门诊，纸质平均 3 分 24 秒，平板平均 1 分 41 秒（Hanmer 等，Applied Clinical Informatics 2021，${SRC}）。这是儿科研究，仅作参考，不是贵院的数字。研究里的问卷都很短（抑郁 2 题、哮喘 5 题、孤独症筛查 20 题等），本院一次 38 题会更久；能借鉴的是“平板比纸质约省一半时间”，不是具体秒数。</p>
     <ul><li>“交完以后”：病人交完即完成；结果由医生审阅签字后才算数。</li><li>“到期提醒”：系统列出到期复测；用短信、电话还是别的方式联系病人，由医院定。</li><li>“高危提醒”：PHQ-9 第 9 题只要不是 0 分，医生网页立即置顶。目前只出现在医生网页上，非门诊时段谁接手由医院定。</li><li>病人和数据都是虚构的。</li></ul>`;
   root.innerHTML = `<div class="pg cmp-pg">
   <div class="ph"><div><h1>病人这边：填得更快、交完就完、高危先被看到</h1></div>

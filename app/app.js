@@ -259,10 +259,10 @@ const CASES = [
       return { old: `总分 3 → “${legacyPHQ(3)}”`, neu: `立即转危机流程，医生端置顶提醒，患者看到 12356 求助热线（系统未显示“情绪良好”）`, risk: "高" }; } },
   { title: "MENQOL：只有潮热，困扰程度 0；其余两项都没有",
     run() { const r = score(SKILLS.menqol, ma({ m1: 0 })); const d = r.domains[0];
-      return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → ${d.band.label}，给出对应建议`, risk: "中" }; } },
+      return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → 按草案暂列“${d.band.label}”，并标“原标准空档 · 需主任审定”`, risk: "中" }; } },
   { title: "MENQOL：潮热、盗汗、白天出汗的困扰程度分别为 3、2、2",
     run() { const r = score(SKILLS.menqol, ma({ m1: 3, m2: 2, m3: 2 })); const d = r.domains[0];
-      return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → ${d.band.label}，医生端调出科室预设备忘（需主任审定，不替医生决策）`, risk: "中" }; } },
+      return { old: `血管舒缩维度 ${d.score} 分 → ${legacyMENQOL(d.score)}`, neu: `${d.score} 分 → 按草案暂列“${d.band.label}”，并标“原标准空档 · 需主任审定”；医生端调出科室预设备忘（不替医生决策）`, risk: "中" }; } },
 ];
 
 function value() {
@@ -279,7 +279,7 @@ function value() {
   const caveat = `试用期以哪份为准由科室定；可只选部分时段或部分患者，避免同一患者重复填写。高危提醒目前只显示在医生网页上，系统不能保证有人及时看到；非门诊时段的处理与通知渠道（短信/电话）需医院来定。`;
   const cases = CASES.map((c) => { const r = c.run(); return `<div class="case"><div class="q">${c.title}</div>
     <div class="r"><span>按原文档</span><span class="bad">✗ ${esc(r.old)}</span><span>本系统</span><span class="ok">✓ ${esc(r.neu)}</span></div></div>`; }).join("");
-  const upmc = `<h2>别人的实测参考</h2><p>美国匹兹堡大学医学中心（UPMC）下属 45 家儿科社区门诊，把纸质问卷改成平板填写。在其中 12 家门诊现场计时：患者填完并交回，纸质平均 3 分 24 秒，平板平均 1 分 41 秒；抑郁筛查（PHQ-2）的完成率从 86.4% 升到 93.8%。</p>
+  const upmc = `<h2>别人的实测参考</h2><p>美国匹兹堡大学医学中心（UPMC）下属 45 家儿科社区门诊，把纸质问卷改成平板填写。在其中 12 家门诊现场计时：患者填完并交回，纸质平均 3 分 24 秒，平板平均 1 分 41 秒；抑郁筛查（PHQ-2）的完成率从 86.4% 升到 93.8%。研究里的问卷都很短（抑郁 2 题、哮喘 5 题、孤独症筛查 20 题等），本院一次 38 题会更久；能借鉴的是“平板比纸质约省一半时间”，不是具体秒数。</p>
     <p class="small muted" style="margin-top:6px">只是参考，不是贵院的数字：对象是儿科门诊，系统与本原型不同；作者也说明时间对比可能受“被观察”影响，且平板偶尔卡住会打断就诊。出处：Hanmer 等，Applied Clinical Informatics 2021;12(2):310–319，<a class="link" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC8046593" target="_blank" rel="noopener">原文</a>。</p>`;
   const cost = `<h2>试用的代价</h2><h3>不换系统</h3><p>不接 HIS，不动现有系统。试用期纸质表可以照用、并行；效果好再由医院决定是否停用。</p>
     <h3>几乎不用培训</h3><p>患者扫码即可填写，医生端只是一个网页，看完点一下确认。</p>
@@ -365,7 +365,7 @@ function board() {
     <div class="card"><div class="big">${k.patients}</div><p>建档患者</p></div>
     <div class="card"><div class="big">${k.retestRate}%</div><p>到期复测完成率</p></div>
     <div class="card"><div class="big">${k.modPlus}%</div><p>至少一个维度中度以上</p></div>
-    <div class="card"><div class="big">${k.crises} 例</div><p>自伤风险提醒${k.crises ? `，平均 ${k.resp} 分钟内有人跟进` : ""}</p></div>
+    <div class="card"><div class="big">${k.crises} 例</div><p>自伤风险提醒（谁接手、多快处理由医院定）</p></div>
   </div>
   <div class="g2b">
     <div class="card"><h2 title="这类前后对比数据，可以直接用于科室质控、年度总结和临床研究。">复测患者：首诊与 3 个月后</h2><p class="small muted">${paired.length} 名完成复测的患者，各维度平均分（1–8，越低越好）</p>
@@ -761,7 +761,7 @@ function skills() {
     <div class="ph-act">${explain("skills")}</div></div>
   <div class="sk">
    <div class="card"><h2>黄金用例 <span class="big ${pass === res.length ? "ok" : "bad"}" style="font-size:20px">${pass}/${res.length}</span> 通过</h2>
-    <p class="small muted">打开本页时在浏览器里现场运行（页面版本 v1.1）。每改一次技能包都要重跑，全部通过才允许上线。运行时判定不经过 AI；开发时若用 AI 帮忙起草规则修改，也必须先过测试、再由人确认。</p>
+    <p class="small muted">打开本页时在浏览器里现场运行（页面版本 v1.1.1）。每改一次技能包都要重跑，全部通过才允许上线。运行时判定不经过 AI；开发时若用 AI 帮忙起草规则修改，也必须先过测试、再由人确认。</p>
     <div class="gold">${res.map((r) => `<div><span class="${r.pass ? "ok" : "bad"}">${r.pass ? "✓" : "✗"}</span><span>${esc(r.name)}${r.errs.length ? `<br><span class="bad">${esc(r.errs.join("；"))}</span>` : ""}</span></div>`).join("")}</div></div>
    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">技能包原文</h2>
     <div class="row">${Object.values(SKILLS).map((s) => `<button class="btn ghost" data-sk="${s.id}">${s.id}</button>`).join("")}${Object.values(ROLES).map((r) => `<button class="btn ghost" data-ro="${r.id}">角色：${r.name.split("（")[0]}</button>`).join("")}</div></div>
